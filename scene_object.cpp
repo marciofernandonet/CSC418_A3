@@ -24,7 +24,7 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// intersection.normal, intersection.none, intersection.t_value.   
 	//
 	// HINT: Remember to first transform the ray into object space  
-	// to simplify the intersection test.
+	// to simplify the intersection test.ssss
 
 	return false;
 }
