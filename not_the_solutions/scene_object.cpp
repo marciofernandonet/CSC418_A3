@@ -20,42 +20,49 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// (0, 0, 1).
 	//
 	// Your goal here is to fill ray.intersection with correct values
-	// should an intersection occur.  This includes intersection.point,
-	// intersection.normal, intersection.none, intersection.t_value.
+	// should an intersection occur.  This includes intersection.point, 
+	// intersection.normal, intersection.none, intersection.t_value.   
 	//
-	// HINT: Remember to first transform the ray into object space
+	// HINT: Remember to first transform the ray into object space  
 	// to simplify the intersection test.
+	
+	// First Transform ray into object space
+	// Note that the 4x4 matrix class has operator * overloaded so we can multiply 4x4 matricies
+	// with 3D-vectors and 3D points; whether point or vector, the appropriate fourth homogeneous 
+	// coordinate will be added and transformation will be applied. Returned result will be a 
+	// 3D vector or point
 
-	Point3D  tpoint;
-	Vector3D tvector;
+	Point3D  startPoint;
+	Vector3D dirVector;
 
-	tpoint = worldToModel * ray.origin;
-	Vector3D e = Vector3D(tpoint[0], tpoint[1], tpoint[2]);
-	Vector3D d = worldToModel * ray.dir;
+	startPoint = worldToModel * ray.origin;
+	Vector3D a = Vector3D(startPoint[0], startPoint[1], startPoint[2]); // Ray origin in object coords
+	Vector3D d = worldToModel * ray.dir; // Ray direction in object coords
 
-	Vector3D n        = Vector3D(0, 0, 1);
-	float denominator = d.dot(n);
-	if (denominator != 0)
+	Vector3D n        = Vector3D(0, 0, 1); //unit surface normal
+	float dn = d.dot(n); // Dot product of ray direction with unit surface normal
+	if (d.dot(n) != 0) //If d.dot(n)==0, ray is in plane of square; don't compute intersection
 	{
-		float t = -e.dot(n)/denominator;
-		if (t >= 0) 
+		float lambdaStar = -a.dot(n)/dn; // Ray parameter at intersection with plane of square
+		if (lambdaStar >= 0) 
 		{
-			Vector3D p = e + t*d;
-			if (!( (p[0] < -0.5) || (p[0] > 0.5) 
-                            || (p[1] < -0.5) || (p[1] > 0.5)) && 
-                               (ray.intersection.none || ray.intersection.t_value > t) )
+			Vector3D p = a + lambdaStar*d; // Point of intesection with plane of square
+			if ( ( (std::abs(p[0])<=0.5) && (std::abs(p[1])<=0.5) ) && 
+                               (ray.intersection.none || ray.intersection.t_value > lambdaStar) )
+				// The above checks to make sure ray intersects square and also
+				// checks if there is an intersection in front of ray 
 			{
-				ray.intersection.none    = false;
-				ray.intersection.t_value = t;
-				ray.intersection.normal  = transNorm(worldToModel, n);
-				//tvector                  = modelToWorld*p;
-				//ray.intersection.point   = Point3D(tvector[0], tvector[1], tvector[2]);
 				ray.intersection.point   = modelToWorld*Point3D(p[0], p[1], p[2]);	
+				ray.intersection.normal  = transNorm(worldToModel, n);
+				ray.intersection.none    = false;
+				ray.intersection.t_value = lambdaStar;
+			
 				
 				return true;
 			}
 		}
 	}
+
 	return false;
 }
 
@@ -71,80 +78,6 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// HINT: Remember to first transform the ray into object space  
 	// to simplify the intersection test.
 	
-	////////////////////////// OUR WORK ///////////////////////////////////
-	// Convert the ray to model view.
-	//
-
-	// From the book, if a ray intersects a circle, 
-        // then it must satisfy a discrimant...
-	// (d*((e-c))**2-(d*d)((e-c)*(e-c)-(R)(R))) >= 0, 
-	// Where * is the dot product, and
-	// Where e is the vector origin, d is the direction,
-	// c is the centre of the circle, and R is the radius of the circle
-	// Since the circle is of unit radius and centred at the origin,
-	// c = 0, R = 1, which implies an intersection occurs when...
-	// (d*e)(d*e)-(d*d)(e*e-1)) >= 0
-
-	Point3D  tpoint;
-	Vector3D tvector;
-
-	tpoint = worldToModel * ray.origin;
-	Vector3D e = Vector3D(tpoint[0], tpoint[1], tpoint[2]);
-	Vector3D d = worldToModel * ray.dir;
-	
-	
-	float A = d.dot(d);
-	float B = e.dot(d);
-	float C = e.dot(e) - 1;
-
-	float discriminant = 4*B*B - 4*A*C;
-
-	if (discriminant >= 0) 
-	{
-		// Otherwise, for some t (which is the co-efficient term in front
-		// of 'd', t >= 0 implies an intersection occured.
-	
-		//float tpos = ((-2*d).dot(e) + discriminant)/(d.dot(d));
-		//float tneg  = ((-2*d).dot(e) - discriminant)/(d.dot(d));
-		
-		float tpos = ( -2*B + pow(discriminant, 0.5) ) / (2*A);
-		float tneg = ( -2*B - pow(discriminant, 0.5) ) / (2*A);
-		
-
-		float t = -1;
-		if (tneg >= 0)
-		{
-			t = tneg;
-		}
-		else if (tpos >= 0)
-		{
-			t = tpos;
-		}
-			
-		
-		if ( t >= 0 && (ray.intersection.none || ray.intersection.t_value > t))
-		
-		// An intersection occured! Let's find out where.
-		// t_plus tells us a what time the intersection occured.
-		// Let's plug that into the ray vector.
-		// The normal of a surface is given by (2x, 2y, 2z) = 2*p
-	
-		{
-			ray.intersection.none = false;
-			ray.intersection.t_value = t;
-	
-			Vector3D v               = e + ray.intersection.t_value*d;
-			v                        = transNorm(worldToModel, v);
-	
-			
-			tvector                  = e + ray.intersection.t_value*d;
-			ray.intersection.point   = modelToWorld*Point3D(tvector[0], tvector[1], tvector[2]);
-			
-
-			ray.intersection.normal  = v;
-			return true;
-		}
-	}
 	return false;
 }
 
