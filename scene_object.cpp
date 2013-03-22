@@ -76,17 +76,17 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		if (t >= 0) {
 			// A collision happened, now check if the ray collided anywhere
 			//  before this point
-			if (ray.intersect.none || ray.intersect.t_value > t) {
+			if (ray.intersection.none || ray.intersection.t_value > t) {
 				// Nope, so set this as the nearest intersection so far
-				ray.intersect.none = false;
-				ray.intersect.t_value = t;
+				ray.intersection.none = false;
+				ray.intersection.t_value = t;
 				
 				// Now find the intersection point and 
 				//  normal (an expensive calculation, saved for the end)
-				Vector3D i = z + t*d;	// The raw model intersection coord
+				Vector3D i = modelRayOrigin + t*modelRayDirection;	// The raw model intersection coord
 				
-				ray.intersect.point = modelToWorld * Point3D(i[0], i[1], i[2]);
-				ray.intersect.normal = transNorm(worldToModel, i);
+				ray.intersection.point = modelToWorld * Point3D(i[0], i[1], i[2]);
+				ray.intersection.normal = transNorm(worldToModel, i);
 				
 				return true;
 			}
