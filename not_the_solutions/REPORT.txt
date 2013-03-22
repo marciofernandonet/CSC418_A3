@@ -1,0 +1,26 @@
+Alterations made:
+
+light_source.cpp
+completed shade method using phong shading model
+
+scene_object.cpp
+completed intersection method for both planar square and sphere
+planar square checked for intersection with the xy plane within the bounds of the square
+sphere checked for intersection using formula (d*((e-c))**2-(d*d)((e-c)*(e-c)-(R)(R)))
+
+raytracer.cpp
+
+render method altered
+added parameter mode to set rendering mode
+'d' for diffuse, 'p' for phong shading and 's' for scene signature
+ray casting code added
+
+shadeRay method altered
+added parameter mode to set rendering mode
+scene signature mode ignores lighting effects
+
+main method altered
+added code to render each scene using each rendering mode
+
+Robert Lech : Worked mainly on calculating the ray-intersections and creating the ray.
+Andrew Robinson : Worked mainly on the lighting and overall correction of the code.
