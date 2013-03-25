@@ -181,14 +181,27 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray ) {
 }
 
 void Raytracer::computeShading( Ray3D& ray ) {
+	if (ray.intersection.none) { return; }	// don't bother checking
 	LightListNode* curLight = _lightSource;
 	for (;;) {
 		if (curLight == NULL) break;
 		// Each lightSource provides its own shading function.
 
 		// Implement shadows here if needed.
-
-		curLight->light->shade(ray);
+		Point3D lightPosition = curLight->light->get_position();
+		Vector3D lightDir = lightPosition - ray.intersection.point;
+		double t = lightDir.length();
+		
+		lightDir.normalize();
+		
+		Ray3D toLight = Ray3D(ray.intersection.point + 0.5 * lightDir,
+				lightDir);
+		traverseScene(_root, toLight);
+		
+		bool inPath = (toLight.intersection.none ||
+				toLight.intersection.t_value > t);
+		
+		curLight->light->shade(ray, inPath);
 		curLight = curLight->next;
 	}
 }
@@ -246,8 +259,6 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 			
 			double dot = n.dot(d);
 			Vector3D newdir = d - (2 * dot * n);
-			//~ Vector3D newdir(-1.0,1.0,-1.0);
-			//~ newdir.normalize();
 			
 			Ray3D newRay = Ray3D(ray.intersection.point + 0.5*newdir,
 					newdir, ray.reflections+1);
@@ -389,7 +400,7 @@ int main(int argc, char* argv[])
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
 			51.2, 0.01 );
-	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
+	Material jade( Colour(0.22, 0.38, 0.33), Colour(0.52, 0.73, 0.57), 
 			Colour(0.316228, 0.316228, 0.316228), 
 			12.8, 0.2 );
 
@@ -421,6 +432,11 @@ int main(int argc, char* argv[])
 	Point3D eye2(4, 2, 1);
 	Vector3D view2(-4, -2, -6);
 	raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp");
+	
+	
+	Point3D eye3(-4, -2, 1);
+	Vector3D view3(4, 2, -6);
+	raytracer.render(width, height, eye3, view3, up, fov, aa, "view3.bmp");
 	
 	return 0;
 }
