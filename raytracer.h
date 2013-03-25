@@ -68,7 +68,7 @@ public:
 	// positioned at eye, with view vector view, up vector up, and 
 	// field of view fov.
 	void render( int width, int height, Point3D eye, Vector3D view, 
-			Vector3D up, double fov, char* fileName );
+			Vector3D up, double fov, int AA_level, char* fileName );
 
 	// Add an object into the scene, with material mat.  The function
 	// returns a handle to the object node you just added, use the 
@@ -104,6 +104,9 @@ private:
 	// could add an interesting background to your scene by modifying 
 	// this function.
 	void initPixelBuffer();
+	
+	// Allocates and initializes a bigger buffer used for anti aliasing
+	void initSuperPixelBuffer();
 
 	// Saves the pixel buffer to a file and deletes the buffer.
 	void flushPixelBuffer(char *file_name);
@@ -127,6 +130,9 @@ private:
 	// Width and height of the viewport.
 	int _scrWidth;
 	int _scrHeight;
+	
+	// Super pixel buffer AA level
+	int _aaLevel;
 
 	// Light list and scene graph.
 	LightListNode *_lightSource;
@@ -136,6 +142,11 @@ private:
 	unsigned char* _rbuffer;
 	unsigned char* _gbuffer;
 	unsigned char* _bbuffer;
+	
+	// Super (anti-aliasing) pixel buffer
+	unsigned char* _superrbuffer;
+	unsigned char* _supergbuffer;
+	unsigned char* _superbbuffer;
 
 	// Maintain global transformation matrices similar to OpenGL's matrix
 	// stack.  These are used during scene traversal. 

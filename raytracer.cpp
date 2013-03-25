@@ -207,6 +207,20 @@ void Raytracer::initPixelBuffer() {
 	}
 }
 
+void Raytracer::initSuperPixelBuffer(){
+	int numbytes = _scrWidth * _aaLevel * _scrHeight * _aaLevel * sizeof(unsigned char);
+	_superrbuffer = new unsigned char[numbytes];
+	_supergbuffer = new unsigned char[numbytes];
+	_superbbuffer = new unsigned char[numbytes];
+	for (int i = 0; i < _aaLevel * _scrHeight; i++) {
+		for (int j = 0; j < _aaLevel * _scrWidth; j++) {
+			_superrbuffer[i*(_aaLevel*_scrWidth)+j] = 0;
+			_supergbuffer[i*(_aaLevel*_scrWidth)+j] = 0;
+			_superbbuffer[i*(_aaLevel*_scrWidth)+j] = 0;
+		}
+	}
+}
+
 void Raytracer::flushPixelBuffer( char *file_name ) {
 	bmp_write( file_name, _scrWidth, _scrHeight, _rbuffer, _gbuffer, _bbuffer );
 	delete _rbuffer;
@@ -232,24 +246,47 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 }	
 
 void Raytracer::render( int width, int height, Point3D eye, Vector3D view, 
-		Vector3D up, double fov, char* fileName ) {
+		Vector3D up, double fov, int AA_level, char* fileName ) {
 	Matrix4x4 viewToWorld;
 	_scrWidth = width;
 	_scrHeight = height;
-	double factor = (double(height)/2)/tan(fov*M_PI/360.0);
+	double factor = (double(_scrHeight)/2)/tan(fov*M_PI/360.0);
 
 	initPixelBuffer();
 	viewToWorld = initInvViewMatrix(eye, view, up);
-
+	
+	/**
+	 * Extension: Anti-aliasing level via supersampling method
+	 * Algorithm:
+	 * Generate an image of dimensions equal to a multiple of the original
+	 * dimensions (as specified by the AA level)
+	 * Then sample individual pixels and average them to compose a pixel
+	 * on the actual screen
+	 */
+	 _aaLevel = AA_level;
+	initSuperPixelBuffer();
+	
+	/// A little print for the user
+	fprintf(stderr, "Rendering %dx%d scene, AA-level %d\n", _scrWidth,
+			_scrHeight, _aaLevel);
+	
+	int superi, superj;
+	double offi, offj;
 	// Construct a ray for each pixel.
 	for (int i = 0; i < _scrHeight; i++) {
 		for (int j = 0; j < _scrWidth; j++) {
+			// Prepare to supersample for anti aliasing
+			for (int m = 0; m < _aaLevel; m++) {
+			for (int n = 0; n < _aaLevel; n++) {
+			
 			// Sets up ray origin and direction in view space, 
 			// image plane is at z = -1.
 			Point3D origin(0, 0, 0);
 			Point3D imagePlane;
-			imagePlane[0] = (-double(width)/2 + 0.5 + j)/factor;
-			imagePlane[1] = (-double(height)/2 + 0.5 + i)/factor;
+			offj = double(1)/(0.5 * _aaLevel) + double(n)/_aaLevel;
+			offi = double(1)/(0.5 * _aaLevel) + double(m)/_aaLevel;
+			imagePlane[0] = (-double((_scrWidth))/2 + offj + j)/factor;
+			imagePlane[1] = (-double((_scrHeight))/2 + offi + i)/factor;
 			imagePlane[2] = -1;
 
 			// Create the transformed ray and shoot it out (shadeRay)
@@ -261,10 +298,42 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			Ray3D ray = Ray3D(transformedOrigin, transformedPixelVector);
 
 			Colour col = shadeRay(ray); 
-
-			_rbuffer[i*width+j] = int(col[0]*255);
-			_gbuffer[i*width+j] = int(col[1]*255);
-			_bbuffer[i*width+j] = int(col[2]*255);
+			
+			superi = i*_aaLevel + m;
+			superj = j*_aaLevel + n;
+			
+			_superrbuffer[superi*(_aaLevel*_scrWidth)+superj] = int(col[0]*255);
+			_supergbuffer[superi*(_aaLevel*_scrWidth)+superj] = int(col[1]*255);
+			_superbbuffer[superi*(_aaLevel*_scrWidth)+superj] = int(col[2]*255);
+			
+			}
+			}
+		}
+	}
+	
+	// Now average out the pixels from the super buffer (supersampling)
+	factor = double(1)/(_aaLevel * _aaLevel);
+	unsigned long rtemp;
+	unsigned long gtemp;
+	unsigned long btemp;
+	for (int i = 0; i < _scrHeight; i++) {
+		for (int j = 0; j < _scrWidth; j++) {
+			rtemp = 0;
+			gtemp = 0;
+			btemp = 0;
+			for (int m = 0; m < _aaLevel; m++) {
+				superi = i*_aaLevel + m;
+				for (int n = 0; n < _aaLevel; n++) {
+					superj = j*_aaLevel + n;
+					
+					rtemp += _superrbuffer[superi*(_aaLevel*_scrWidth)+superj];
+					gtemp += _supergbuffer[superi*(_aaLevel*_scrWidth)+superj];
+					btemp += _superbbuffer[superi*(_aaLevel*_scrWidth)+superj];
+				}
+			}
+			_rbuffer[i*_scrWidth+j] = factor * rtemp;
+			_gbuffer[i*_scrWidth+j] = factor * gtemp;
+			_bbuffer[i*_scrWidth+j] = factor * btemp;
 		}
 	}
 
@@ -281,10 +350,15 @@ int main(int argc, char* argv[])
 	Raytracer raytracer;
 	int width = 320; 
 	int height = 240; 
+	int aa = 2;
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
 		height = atoi(argv[2]);
+	} else if (argc == 4) {
+		width = atoi(argv[1]);
+		height = atoi(argv[2]);
+		aa = atoi(argv[3]);
 	}
 
 	// Camera parameters.
@@ -323,12 +397,12 @@ int main(int argc, char* argv[])
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
-	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
+	raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp");
 	
 	// Render it from a different point of view.
 	Point3D eye2(4, 2, 1);
 	Vector3D view2(-4, -2, -6);
-	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
+	raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp");
 	
 	return 0;
 }
