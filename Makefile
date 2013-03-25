@@ -1,5 +1,6 @@
 CC = g++
-CFLAGS = -g -O2 
+CFLAGS = -g -O2
+CFLAGS_DBG = -g
 LIBS = -lm
 
 raytracer:  raytracer.o util.o light_source.o scene_object.o bmp_io.o
@@ -9,7 +10,4 @@ raytracer:  raytracer.o util.o light_source.o scene_object.o bmp_io.o
 clean:
 	-rm -f core *.o
 	-rm raytracer
-	
-
-
 

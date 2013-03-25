@@ -17,7 +17,11 @@
 #include <cmath>
 
 #ifndef M_PI
-#define M_PI	3.14159265358979323846
+#define M_PI	(3.14159265358979323846)
+#endif
+
+#ifndef MAX_REFLECTIONS
+#define MAX_REFLECTIONS	(3)
 #endif
 
 class Point3D {
@@ -131,7 +135,10 @@ std::ostream& operator <<(std::ostream& o, const Colour& c);
 struct Material {
 	Material( Colour ambient, Colour diffuse, Colour specular, double exp ) :
 		ambient(ambient), diffuse(diffuse), specular(specular), 
-		specular_exp(exp) {}
+		specular_exp(exp), reflectivity(0.05) {}
+	Material( Colour ambient, Colour diffuse, Colour specular, double exp, double ref ) :
+		ambient(ambient), diffuse(diffuse), specular(specular), 
+		specular_exp(exp), reflectivity(ref) {}
 	
 	// Ambient components for Phong shading.
 	Colour ambient; 
@@ -139,8 +146,10 @@ struct Material {
 	Colour diffuse;
 	// Specular components for Phong shading.
 	Colour specular;
-	// Specular expoent.
+	// Specular exponent.
 	double specular_exp;
+	// Reflectivity ratio
+	double reflectivity;
 };
 
 struct Intersection {
@@ -161,10 +170,13 @@ struct Intersection {
 
 // Ray structure. 
 struct Ray3D {
-	Ray3D() {
+	Ray3D() : reflections(0) {
 		intersection.none = true; 
 	}
-	Ray3D( Point3D p, Vector3D v ) : origin(p), dir(v) {
+	Ray3D( Point3D p, Vector3D v ) : origin(p), dir(v), reflections(0) {
+		intersection.none = true;
+	}
+	Ray3D( Point3D p, Vector3D v, int ref) : origin(p), dir(v), reflections(ref) {
 		intersection.none = true;
 	}
 	// Origin and direction of the ray.
@@ -176,6 +188,9 @@ struct Ray3D {
 	// Current colour of the ray, should be computed by the shading
 	// function.
 	Colour col;
+	// A counter for number of times the ray has been reflected so it can be
+	// reflected only a certain number of times
+	int reflections;
 };
 #endif
 

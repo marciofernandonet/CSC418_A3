@@ -235,13 +235,31 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 	// Don't bother shading if the ray didn't hit 
 	// anything.
 	if (!ray.intersection.none) {
-		computeShading(ray); 
-		col = ray.col;  
+		computeShading(ray);
+		
+		if (ray.reflections < MAX_REFLECTIONS) {
+			// emit another ray
+			Vector3D n = ray.intersection.normal;
+			n.normalize();
+			Vector3D d = ray.dir;
+			d.normalize();
+			
+			double dot = n.dot(d);
+			Vector3D newdir = d - (2 * dot * n);
+			//~ Vector3D newdir(-1.0,1.0,-1.0);
+			//~ newdir.normalize();
+			
+			Ray3D newRay = Ray3D(ray.intersection.point + 0.5*newdir,
+					newdir, ray.reflections+1);
+			Colour secondaryColour = shadeRay(newRay);
+			
+			double ref = ray.intersection.mat->reflectivity;
+			col = (1-ref)*ray.col + ref*secondaryColour;
+		} else {
+			col = ray.col;
+		}
 	}
-
-	// You'll want to call shadeRay recursively (with a different ray, 
-	// of course) here to implement reflection/refraction effects.  
-
+	
 	return col; 
 }	
 
@@ -370,10 +388,10 @@ int main(int argc, char* argv[])
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 );
+			51.2, 0.01 );
 	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
 			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 );
+			12.8, 0.2 );
 
 	// Defines a point light source.
 	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
