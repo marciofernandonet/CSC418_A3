@@ -38,7 +38,11 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	Vector3D a = Vector3D(startPoint[0], startPoint[1], startPoint[2]); // Ray origin in object coords
 	Vector3D d = worldToModel * ray.dir; // Ray direction in object coords
 
-	Vector3D n        = Vector3D(0, 0, 1); //unit surface normal
+	// Determine unit normal, pointing outwards from square
+	Vector3D n = Vector3D(0, 0, 1); //unit surface normal
+	if(a[2] <0){
+		n = Vector 3D(0, 0, -1);}
+
 	float dn = d.dot(n); // Dot product of ray direction with unit surface normal
 	if (d.dot(n) != 0) //If d.dot(n)==0, ray is in plane of square; don't compute intersection
 	{
@@ -99,8 +103,10 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		// A collision may have happened, but on which hemisphere?
 		float descriminant = pow(square_descriminant, 0.5);
 		
-		float t_front = (-2*ddotz + descriminant) / (2 * ddotd);
-		float t_back = (-2*ddotz - descriminant) / (2 * ddotd);
+		//float t_front = (-2*ddotz + descriminant) / (2 * ddotd);
+		//float t_back = (-2*ddotz - descriminant) / (2 * ddotd);
+		float t_front = (-ddotz + descriminant) / (ddotd);
+		float t_back = (-ddotz - descriminant) / (ddotd);
 		
 		float t = t_front;
 		if (t_back >= 0) {
@@ -129,4 +135,86 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	
 	return false;
 }
+//==============================================================================================
+
+bool UnitCylinder::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+		const Matrix4x4& modelToWorld ) {
+	// In object coords, the cylinder has a circular base centered at x=y=0 and
+	// has its axis aligned with z-axis, running from z=-1 to z=+1.
+	Point3D  modelRayOrigin;
+
+	modelRayOrigin = worldToModel * ray.origin;
+	Vector3D a = Vector3D(modelRayOrigin[0], modelRayOrigin[1], modelRayOrigin[2]); // Ray origin in object coords
+	Vector3D d = worldToModel * ray.dir; // Ray direction in object coords
+	
+	float ddotd_xy = d.dot(d) - d[2]*d[2];
+	float adota_xy = a.dot(a) - a[2]*a[2];
+	float ddota_xy = d.dot(a) - a[2]*d[2];
+	//First check for intersection with infinite cylinder, disreagarding z coord
+	float discriminant_xy  = (a[0]*d[0] + a[1]*d[1])*(a[0]*d[0] + a[1]*d[1]) - (d[0]*d[0] + d[1]*d[1])*(a[0]*a[0] + a[1]*a[1] -1);
+
+	if(discriminant_xy >= 0){ //Ray intersects infinite cylinder
+		float sqt_discriminant_xy = pow(discriminant_xy, 0.5);
+		float t_front = (-ddota_xy + sqt_discriminant_xy) / ddotd_xy;
+		float t_back = (-ddota_xy - sqt_discriminant_xy) / ddotd_xy;
+		
+		float t_temp = t_front; 
+		if (t_back >= 0) {
+			t_temp = t_back;
+		}
+		//Check for intersections in front of object
+		if (ray.intersection.none || ray.intersection.t_value > t_temp) {
+			// Nope, so set this as the nearest intersection so far
+			Vector3D infCylInt = a + t_temp*d; //intersection with infinite cylinder
+			if (std::abs(infCylInt[2]) <= 1){ // Ray hits side of cylinder
+			
+				ray.intersection.none = false;
+				ray.intersection.t_value = t_temp;
+				ray.intersection.point = modelToWorld * Point3D(infCylInt[0], infCylInt[1], infCylInt[2]);
+				Vector3D nInt =  Vector3D(infCylInt[0], indCylInt[1], 0);
+				nInt.normalize();
+				ray.intersection.normal = transNorm(worldToModel, nInt);
+					
+				return true;
+			}
+			// At this point, know that ray intersects infinite cylinder
+			// but not between z=-1 and z=+1.
+			// It might still hit the top or bottom, which are flat circles
+			// Need to check intersections with the planes z=1, z=-1
+				
+			//t-value for intersection with z=1 and z=-1 planes respectively
+			float t1 = fmax((1-a[2])/d[2],0);
+			float t2 = fmax((-1-a[2])/d[2],0);
+			
+			if((t1 > 0) && (t2 > 0)){ //Ray is outside sandwich formed byboth planes
+				//Ray parameter at near plane and intersection point 
+				t_temp = fmin(t1, t2);
+				Vector3D i = a + t_temp*d;
+				if(i[0]*i[0] + i[1]*i[1] - 1 > 0){ // Ray misses cylinder
+					return false;
+				}
+				//Determine unit normal vector
+				Vector3D nInt = Vector3D(0,0,1); // default if intersection is with top cap
+				if(i[2]<0){ //intersection is with bottom cap
+					nInt = Vector3D(0,0,-1);
+				}
+				nInt.normalize();
+
+				ray.intersection.none = false;
+				ray.intersection.t_value = t_temp;
+				ray.intersection.point = modelToWorld * Point3D(i[0], i[1], i[2]);
+				ray.intersection.normal = transNorm(worldToModel, nInt);
+					
+				return true;	
+			}
+			//=============================================
+			//Should still implement something for the case 
+			//where ray starts inside cylinder
+			//=============================================
+		}
+		
+	}//endif discriminant
+	
+	return false;
+} //End Unit Cylinder
 
