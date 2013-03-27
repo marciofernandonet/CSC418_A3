@@ -12,6 +12,7 @@
 #include <iostream>
 #include "scene_object.h"
 
+
 bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld ) {
 	// TODO: implement intersection code for UnitSquare, which is
@@ -41,7 +42,8 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// Determine unit normal, pointing outwards from square
 	Vector3D n = Vector3D(0, 0, 1); //unit surface normal
 	if(a[2] <0){
-		n = Vector 3D(0, 0, -1);}
+		n = Vector3D(0, 0, -1);
+	}
 
 	float dn = d.dot(n); // Dot product of ray direction with unit surface normal
 	if (d.dot(n) != 0) //If d.dot(n)==0, ray is in plane of square; don't compute intersection
@@ -166,15 +168,15 @@ bool UnitCylinder::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		if (ray.intersection.none || ray.intersection.t_value > t_temp) {
 			// Nope, so set this as the nearest intersection so far
 			Vector3D infCylInt = a + t_temp*d; //intersection with infinite cylinder
+
 			if (std::abs(infCylInt[2]) <= 1){ // Ray hits side of cylinder
 			
 				ray.intersection.none = false;
 				ray.intersection.t_value = t_temp;
 				ray.intersection.point = modelToWorld * Point3D(infCylInt[0], infCylInt[1], infCylInt[2]);
-				Vector3D nInt =  Vector3D(infCylInt[0], indCylInt[1], 0);
+				Vector3D nInt =  Vector3D(infCylInt[0], infCylInt[1], 0);
 				nInt.normalize();
-				ray.intersection.normal = transNorm(worldToModel, nInt);
-					
+				ray.intersection.normal = transNorm(worldToModel, Vector3D(-1,-1,1));
 				return true;
 			}
 			// At this point, know that ray intersects infinite cylinder

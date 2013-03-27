@@ -250,7 +250,7 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 	if (!ray.intersection.none) {
 		computeShading(ray);
 		
-		if (ray.reflections < MAX_REFLECTIONS) {
+		if ((ray.reflections < MAX_REFLECTIONS) /*&& (ray.refractions <3)*/) {
 			// emit another ray
 			Vector3D n = ray.intersection.normal;
 			n.normalize();
@@ -260,7 +260,7 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 			double dot = n.dot(d);
 			Vector3D newdir = d - (2 * dot * n);
 			
-			Ray3D newRay = Ray3D(ray.intersection.point + 0.5*newdir,
+			Ray3D newRay = Ray3D(ray.intersection.point + 0.01*newdir,
 					newdir, ray.reflections+1);
 			Colour secondaryColour = shadeRay(newRay);
 			
@@ -269,6 +269,50 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 		} else {
 			col = ray.col;
 		}
+		// Check for refractions		
+		// Don't check for refractions of reflected rays
+		
+		if((ray.intersection.mat->transitivity >= 0.1) && (ray.refractions < MAX_REFRACTIONS) ){ //i.e., don't refract reflected rays
+			double c1 = ray.cLight;
+			double c2 = ray.intersection.mat->cLight;
+			if (ray.cLight < 0.999){//Ray leaves object to air/vacuum
+				c2= 1.000;}
+
+			Vector3D n = ray.intersection.normal;
+			n.normalize();
+			Vector3D d = ray.dir;
+			d.normalize();
+
+			double dot = n.dot(d);
+			Vector3D reflDir = d - (2 * dot * n);
+			reflDir.normalize();
+
+			//Now determine refraction direction
+			//Depends on reflDir, c1, c2, n, as specified in the relation below
+			double theta1 = acos( n.dot(-d) );
+			if(dot > 0 ){ //Ray is leaving object
+				theta1 = acos( n.dot(d) ); }
+			double theta2 = asin(c2*sin(theta1)/c1);
+			/*
+			if(dot <= 0 ){ //Ray is entering object
+				Vector3D refractDir = -(c2/c1)*reflDir + ( (c2/c2)*cos(theta1) - cos(theta2))*n;
+			}else{ //Ray is leaving object
+				Vector3D refractDir = -(c2/c1)*reflDir + ( (c2/c2)*cos(theta1) + cos(theta2))*n;
+			}
+			*/
+			Vector3D refractDir = (c2/c1)*ray.dir + ( (c2/c1)*cos(theta1) - cos(theta2))*n;
+			if(dot > 0 ){ //Ray is leaving object
+				refractDir = (c2/c1)*ray.dir - ( (c2/c1)*cos(theta1) - cos(theta2))*n;}
+			
+			refractDir.normalize();
+			
+			Ray3D refractRay = Ray3D(ray.intersection.point + 0.01*refractDir, refractDir,ray.reflections, ray.refractions+1, c2 );
+
+			Colour colRefract = shadeRay(refractRay);
+			double matTran = ray.intersection.mat->transitivity;
+			col = (1-matTran)*col + matTran*colRefract;
+		}
+		
 	}
 	
 	return col; 
@@ -399,22 +443,28 @@ int main(int argc, char* argv[])
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2, 0.01 );
+			51.2, 0.01, 0.0, 1/2.4 );
 	Material jade( Colour(0.22, 0.38, 0.33), Colour(0.52, 0.73, 0.57), 
 			Colour(0.316228, 0.316228, 0.316228), 
-			12.8, 0.2 );
+			12.8, 0.2 , 0.0, 0.0 );
+	Material polishedGold( Colour(0.24725, 0.2245, 0.0645), Colour(0.34615, 0.3143, 0.0903),
+			Colour(0.797357, 0.723991, 0.208006), 83.2, 0.01,0.0,0.0);
+
+	Material glass( Colour(0.15, 0.15, 0.15), Colour(0.08, 0.08, 0.08), Colour(0.2, 0.2, 0.2), 10.1,0.05,0.9,1/1.5 );
 
 	// Defines a point light source.
 	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
 				Colour(0.9, 0.9, 0.9) ) );
 
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold);
+	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade);
+	SceneDagNode* cylinder = raytracer.addObject( new UnitCylinder(), &gold);
 	
 	// Apply some transformations to the unit square.
 	double factor1[3] = { 1.0, 2.0, 1.0 };
 	double factor2[3] = { 6.0, 6.0, 6.0 };
+	double factor3[3] = { 1.0, 1.0, 2.0 };
 	raytracer.translate(sphere, Vector3D(0, 0, -5));	
 	raytracer.rotate(sphere, 'x', -45); 
 	raytracer.rotate(sphere, 'z', 45); 
@@ -423,6 +473,13 @@ int main(int argc, char* argv[])
 	raytracer.translate(plane, Vector3D(0, 0, -7));	
 	raytracer.rotate(plane, 'z', 45); 
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+	
+	
+	raytracer.translate(cylinder, Vector3D(2, 0, -5));
+	raytracer.rotate(cylinder, 'x', -90); 
+	raytracer.scale(cylinder, Point3D(0, 0, 0), factor3);
+	
+
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	

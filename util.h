@@ -24,6 +24,10 @@
 #define MAX_REFLECTIONS	(3)
 #endif
 
+#ifndef MAX_REFRACTIONS 
+#define MAX_REFRACTIONS (5)
+#endif
+
 class Point3D {
 public:
 	Point3D(); 
@@ -135,11 +139,13 @@ std::ostream& operator <<(std::ostream& o, const Colour& c);
 struct Material {
 	Material( Colour ambient, Colour diffuse, Colour specular, double exp ) :
 		ambient(ambient), diffuse(diffuse), specular(specular), 
-		specular_exp(exp), reflectivity(0.05) {}
-	Material( Colour ambient, Colour diffuse, Colour specular, double exp, double ref ) :
+		specular_exp(exp), reflectivity(0.05), transitivity(0.0), cLight(1.0) {}
+	Material( Colour ambient, Colour diffuse, Colour specular, double exp, double ref) :
 		ambient(ambient), diffuse(diffuse), specular(specular), 
-		specular_exp(exp), reflectivity(ref) {}
-	
+		specular_exp(exp), reflectivity(ref),transitivity(0.0), cLight(1.0) {}
+	Material( Colour ambient, Colour diffuse, Colour specular, double exp, double ref, double transitivity, double cLight) :
+		ambient(ambient), diffuse(diffuse), specular(specular), 
+		specular_exp(exp), reflectivity(ref) , transitivity(transitivity), cLight(cLight){}
 	// Ambient components for Phong shading.
 	Colour ambient; 
 	// Diffuse components for Phong shading.
@@ -150,6 +156,10 @@ struct Material {
 	double specular_exp;
 	// Reflectivity ratio
 	double reflectivity;
+	// Transitivity; 0 for opaque, 1.0 for completely transparetn
+	double transitivity;
+	//Speed of light inside material
+	double cLight;
 };
 
 struct Intersection {
@@ -170,13 +180,16 @@ struct Intersection {
 
 // Ray structure. 
 struct Ray3D {
-	Ray3D() : reflections(0) {
+	Ray3D() : reflections(0), refractions(0) {
 		intersection.none = true; 
 	}
-	Ray3D( Point3D p, Vector3D v ) : origin(p), dir(v), reflections(0) {
+	Ray3D( Point3D p, Vector3D v ) : origin(p), dir(v), reflections(0),refractions(0), cLight(1.0) {
 		intersection.none = true;
 	}
-	Ray3D( Point3D p, Vector3D v, int ref) : origin(p), dir(v), reflections(ref) {
+	Ray3D( Point3D p, Vector3D v, int ref) : origin(p), dir(v), reflections(ref), refractions(0), cLight(1.0) {
+		intersection.none = true;
+	}
+	Ray3D( Point3D p, Vector3D v, int ref, int refract, double cLight) : origin(p), dir(v), reflections(ref), refractions(refract), cLight(cLight) {
 		intersection.none = true;
 	}
 	// Origin and direction of the ray.
@@ -191,6 +204,11 @@ struct Ray3D {
 	// A counter for number of times the ray has been reflected so it can be
 	// reflected only a certain number of times
 	int reflections;
+	//Refraction counter
+	int refractions;
+	// Ratio of Speed of light in current medium vs vacuum (always <=1)
+	// Used for computing refraction angles
+	double cLight;
 };
 #endif
 
