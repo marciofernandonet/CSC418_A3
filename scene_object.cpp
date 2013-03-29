@@ -149,74 +149,150 @@ bool UnitCylinder::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	Vector3D a = Vector3D(modelRayOrigin[0], modelRayOrigin[1], modelRayOrigin[2]); // Ray origin in object coords
 	Vector3D d = worldToModel * ray.dir; // Ray direction in object coords
 	
-	float ddotd_xy = d.dot(d) - d[2]*d[2];
+
+	float ddotd_xy = d.dot(d) - d[2]*d[2]; 
 	float adota_xy = a.dot(a) - a[2]*a[2];
 	float ddota_xy = d.dot(a) - a[2]*d[2];
+	
 	//First check for intersection with infinite cylinder, disreagarding z coord
 	float discriminant_xy  = (a[0]*d[0] + a[1]*d[1])*(a[0]*d[0] + a[1]*d[1]) - (d[0]*d[0] + d[1]*d[1])*(a[0]*a[0] + a[1]*a[1] -1);
 
-	if(discriminant_xy >= 0){ //Ray intersects infinite cylinder
-		float sqt_discriminant_xy = pow(discriminant_xy, 0.5);
-		float t_front = (-ddota_xy + sqt_discriminant_xy) / ddotd_xy;
-		float t_back = (-ddota_xy - sqt_discriminant_xy) / ddotd_xy;
+	if( discriminant_xy >= 0){ //Ray intersects infinite cylinder
 		
-		float t_temp = t_front; 
-		if (t_back >= 0) {
-			t_temp = t_back;
-		}
-		//Check for intersections in front of object
-		if (ray.intersection.none || ray.intersection.t_value > t_temp) {
-			// Nope, so set this as the nearest intersection so far
-			Vector3D infCylInt = a + t_temp*d; //intersection with infinite cylinder
+		if(ddotd_xy >0.00001){
+			// If ddotd_xy <= 0.00001, ray is nearly (or exactly) parallel to z-axis
+			// so skip checking sides and check below to see it it intersects caps
+			// at z=-1 or z=+1
+	
+			float sqt_discriminant_xy = pow(discriminant_xy, 0.5);
+			float t_front = (-ddota_xy + sqt_discriminant_xy) / ddotd_xy;
+			float t_back = (-ddota_xy - sqt_discriminant_xy) / ddotd_xy;
+		
+			float t_cylWall = t_front; 
 
-			if (std::abs(infCylInt[2]) <= 1){ // Ray hits side of cylinder
-			
-				ray.intersection.none = false;
-				ray.intersection.t_value = t_temp;
-				ray.intersection.point = modelToWorld * Point3D(infCylInt[0], infCylInt[1], infCylInt[2]);
-				Vector3D nInt =  Vector3D(infCylInt[0], infCylInt[1], 0);
-				nInt.normalize();
-				ray.intersection.normal = transNorm(worldToModel, Vector3D(-1,-1,1));
-				return true;
+			// Check if ray is pointng away from cylinder
+			if(t_front < 0){
+				return false;
 			}
-			// At this point, know that ray intersects infinite cylinder
-			// but not between z=-1 and z=+1.
-			// It might still hit the top or bottom, which are flat circles
-			// Need to check intersections with the planes z=1, z=-1
-				
-			//t-value for intersection with z=1 and z=-1 planes respectively
-			float t1 = fmax((1-a[2])/d[2],0);
-			float t2 = fmax((-1-a[2])/d[2],0);
+
+			// Which is the near face?
+			if (t_back >= 0) {
+				t_cylWall = t_back;
+			}
+			//Check for intersections in front of near cylinder wall
+			if (ray.intersection.none || ray.intersection.t_value > t_cylWall) {
+				// Nope, so set this as the nearest intersection so far
+				Vector3D infCylInt = a + t_cylWall*d; //intersection with infinite cylinder
+
+				if (std::abs(infCylInt[2]) <= 1){ // Ray hits side of cylinder between z=-1 and z=+1
 			
-			if((t1 > 0) && (t2 > 0)){ //Ray is outside sandwich formed byboth planes
-				//Ray parameter at near plane and intersection point 
-				t_temp = fmin(t1, t2);
-				Vector3D i = a + t_temp*d;
-				if(i[0]*i[0] + i[1]*i[1] - 1 > 0){ // Ray misses cylinder
+					ray.intersection.none = false;
+					ray.intersection.t_value = t_cylWall;
+					ray.intersection.point = modelToWorld * Point3D(infCylInt[0], infCylInt[1], infCylInt[2]);
+					Vector3D nInt =  Vector3D(infCylInt[0], infCylInt[1], 0);//surface unit normal at intersection
+					//nInt.normalize();
+					ray.intersection.normal = transNorm(worldToModel, nInt);
+					return true;
+				}//Ray missed side of cylinder between z=-1, z=+1
+			} //Something blocking ray and cylinder wall,
+			  //but whatever it is might not block the rays 
+			  //intersections with caps, which is checked below
+		}
+
+			// At this point, know that ray intersects infinite cylinder
+			// but not on walls between z=-1 and z=+1.
+			// We are interested in the cases where the ray 
+			// might still hit the top or bottom caps, which are flat circles
+			// of radius 1.
+			// Need to check intersections with the planes z=1, z=-1,
+			// then look at x^2+y^2 for those intersection points.
+		
+			// First a special case: if d[2]==0, ray moves parallel to planes of
+			// caps, but we know it did not intersect cylinder between z=-1
+			// and z=+1, so it misses the cylinder.
+			if(d[2]==0){
+				// Ray moves parallel to planes of caps
+				// but does not hit walls
+				return false;
+			}
+
+			// t-values for intersection with planes z=+1, z=-1 respectively
+			float t1 = ( 1 - a[2])/d[2]; // int with z=+1 plane
+			float t2 = (-1 - a[2])/d[2]; // int with z=-1 plane
+
+			if((t1 > 0) && (t2 > 0)){ 
+				//Ray is outside sandwich formed by two planes 
+				float t_nearPlane = std::min(t1,t2);
+
+				if( (!ray.intersection.none) && (ray.intersection.t_value <= t_nearPlane) ){
+					// Ray has an intersection in front of the near plane
+					// Ray does not intersect near plane
 					return false;
 				}
-				//Determine unit normal vector
-				Vector3D nInt = Vector3D(0,0,1); // default if intersection is with top cap
-				if(i[2]<0){ //intersection is with bottom cap
-					nInt = Vector3D(0,0,-1);
-				}
-				nInt.normalize();
+				// Now we know ray has no intersection in front of near plane
+				// So perform computations to determine if cap is intersected and where
+				Vector3D zPlaneInt = a + t_nearPlane*d;
+				// xy coords of intersection with near plane in front of ray
+				float r_xy = zPlaneInt[0]*zPlaneInt[0]+zPlaneInt[1]*zPlaneInt[1];
 
-				ray.intersection.none = false;
-				ray.intersection.t_value = t_temp;
-				ray.intersection.point = modelToWorld * Point3D(i[0], i[1], i[2]);
-				ray.intersection.normal = transNorm(worldToModel, nInt);
+				if( r_xy < 1){
+					// Intersection with near plane hits cap
+					// Determine unit normal at correct cap
+					Vector3D n = Vector3D(0,0,1);
+					if(zPlaneInt[2] < 0){ // Ray intersects z=-1 plane, otherwise z=+1
+						n[2] = -1;
+					}
+					ray.intersection.none = false;
+					ray.intersection.t_value = t_nearPlane;
+					ray.intersection.point = modelToWorld * Point3D(zPlaneInt[0], zPlaneInt[1], zPlaneInt[2]);
+					ray.intersection.normal = transNorm(worldToModel, n);
+					return true;
 					
-				return true;	
+				}
+				// Otherwise ray misses cap
+				return false;
+			
+			}else if( ((t1 > 0) && (t2 < 0)) || ((t1 < 0) && (t2 > 0)) ){ 
+				//Ray is inside sandwich
+				float t_nearPlane = std::max(t1,t2); // note difference from case above
+
+				if( (!ray.intersection.none) && (ray.intersection.t_value <= t_nearPlane) ){
+					// Ray has an intersection in front of the near plane
+					// Ray does not intersect near plane
+					return false;
+				}
+				
+				// Now we know ray has no intersection in front of near plane
+				// So perform computations to determine if cap is intersected and where
+				Vector3D zPlaneInt = a + t_nearPlane*d;
+				// xy coords of intersection with near plane in front of ray
+				float r_xy = zPlaneInt[0]*zPlaneInt[0]+zPlaneInt[1]*zPlaneInt[1];
+
+				if( r_xy < 1){
+					// Intersection with near plane hits cap
+					// Determine unit normal at correct cap
+					Vector3D n = Vector3D(0,0,1);
+					if(zPlaneInt[2] < 0){ // Ray intersects z=-1 plane, otherwise z=+1
+						n[2] = -1;
+					}
+					ray.intersection.none = false;
+					ray.intersection.t_value = t_nearPlane;
+					ray.intersection.point = modelToWorld * Point3D(zPlaneInt[0], zPlaneInt[1], zPlaneInt[2]);
+					ray.intersection.normal = transNorm(worldToModel, n);
+					return true;
+					
+				}
+				// Otherwise ray misses cap
+				return false;
+
+			}else{  // (t1 < 0) && (t2<0)
+				// Ray is outside sandwich and pointing away from it
+				return false;
 			}
-			//=============================================
-			//Should still implement something for the case 
-			//where ray starts inside cylinder
-			//=============================================
-		}
 		
-	}//endif discriminant
+	}//end of if(discriminant)
 	
+	// If we get his far the ray has missed infinite cylinder entirely...
 	return false;
 } //End Unit Cylinder
 
