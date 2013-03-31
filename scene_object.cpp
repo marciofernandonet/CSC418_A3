@@ -176,7 +176,7 @@ bool UnitCylinder::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 				ray.intersection.point = modelToWorld * Point3D(infCylInt[0], infCylInt[1], infCylInt[2]);
 				Vector3D nInt =  Vector3D(infCylInt[0], infCylInt[1], 0);
 				nInt.normalize();
-				ray.intersection.normal = transNorm(worldToModel, Vector3D(-1,-1,1));
+				ray.intersection.normal = transNorm(worldToModel, nInt);
 				return true;
 			}
 			// At this point, know that ray intersects infinite cylinder

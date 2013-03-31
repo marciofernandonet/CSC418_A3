@@ -188,20 +188,8 @@ void Raytracer::computeShading( Ray3D& ray ) {
 		// Each lightSource provides its own shading function.
 
 		// Implement shadows here if needed.
-		Point3D lightPosition = curLight->light->get_position();
-		Vector3D lightDir = lightPosition - ray.intersection.point;
-		double t = lightDir.length();
 		
-		lightDir.normalize();
-		
-		Ray3D toLight = Ray3D(ray.intersection.point + 0.5 * lightDir,
-				lightDir);
-		traverseScene(_root, toLight);
-		
-		bool inPath = (toLight.intersection.none ||
-				toLight.intersection.t_value > t);
-		
-		curLight->light->shade(ray, inPath);
+		curLight->light->shade(ray);
 		curLight = curLight->next;
 	}
 }
@@ -453,8 +441,17 @@ int main(int argc, char* argv[])
 	Material glass( Colour(0.15, 0.15, 0.15), Colour(0.08, 0.08, 0.08), Colour(0.2, 0.2, 0.2), 10.1,0.05,0.9,1/1.5 );
 
 	// Defines a point light source.
-	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
-				Colour(0.9, 0.9, 0.9) ) );
+	//~ raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
+				//~ Colour(0.9, 0.9, 0.9) ) );
+	// Defines a ball light source
+	raytracer.addLightSource( new BallLight(Point3D(-5, 1, 10),
+			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
+	raytracer.addLightSource( new BallLight(Point3D(5, -1, 10),
+			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
+	raytracer.addLightSource( new BallLight(Point3D(0, 0, 16),
+			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
+	raytracer.addLightSource( new BallLight(Point3D(0, 0, -10),
+			5.0, Colour(0.9, 0.9, 0.9), 1.666) );
 
 	// Add a unit square into the scene with material mat.
 	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold);
