@@ -264,8 +264,9 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 			double c1 = ray.cLight;
 			double c2 = ray.intersection.mat->cLight;
 			if (ray.cLight < 0.999){//Ray leaves object to air/vacuum
-				c2= 1.000;}
-
+				c2= 1;}
+			
+		
 			Vector3D n = ray.intersection.normal;
 			n.normalize();
 			Vector3D d = ray.dir;
@@ -279,26 +280,26 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 			//Depends on reflDir, c1, c2, n, as specified in the relation below
 			double theta1 = acos( n.dot(-d) );
 			if(dot > 0 ){ //Ray is leaving object
-				theta1 = acos( n.dot(d) ); }
-			double theta2 = asin(c2*sin(theta1)/c1);
-			/*
-			if(dot <= 0 ){ //Ray is entering object
-				Vector3D refractDir = -(c2/c1)*reflDir + ( (c2/c2)*cos(theta1) - cos(theta2))*n;
-			}else{ //Ray is leaving object
-				Vector3D refractDir = -(c2/c1)*reflDir + ( (c2/c2)*cos(theta1) + cos(theta2))*n;
+				theta1 = acos( n.dot(d) ); 
 			}
-			*/
+			double theta2 = asin(c2*sin(theta1)/c1);
+
+			//Check for critical angle
+			
+			// Compute refraction direction 
 			Vector3D refractDir = (c2/c1)*ray.dir + ( (c2/c1)*cos(theta1) - cos(theta2))*n;
 			if(dot > 0 ){ //Ray is leaving object
 				refractDir = (c2/c1)*ray.dir - ( (c2/c1)*cos(theta1) - cos(theta2))*n;}
 			
 			refractDir.normalize();
 			
-			Ray3D refractRay = Ray3D(ray.intersection.point + 0.01*refractDir, refractDir,ray.reflections, ray.refractions+1, c2 );
+			Ray3D refractRay = Ray3D(ray.intersection.point + 0.001*refractDir, refractDir,ray.reflections, ray.refractions+1, c2 );
 
 			Colour colRefract = shadeRay(refractRay);
 			double matTran = ray.intersection.mat->transitivity;
-			col = (1-matTran)*col + matTran*colRefract;
+			if(!refractRay.intersection.none){ //Refracted ray does not go off into space
+				col = (1-matTran)*col + matTran*colRefract;
+			}
 		}
 		
 	}
@@ -454,7 +455,7 @@ int main(int argc, char* argv[])
 			5.0, Colour(0.9, 0.9, 0.9), 1.666) );
 
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold);
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass);
 	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade);
 	SceneDagNode* cylinder = raytracer.addObject( new UnitCylinder(), &gold);
 	
@@ -473,8 +474,9 @@ int main(int argc, char* argv[])
 	
 	
 	raytracer.translate(cylinder, Vector3D(2, 0, -5));
-	raytracer.rotate(cylinder, 'x', -90); 
+	raytracer.rotate(cylinder, 'x', -75); 
 	raytracer.scale(cylinder, Point3D(0, 0, 0), factor3);
+
 	
 
 
