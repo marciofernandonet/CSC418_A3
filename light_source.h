@@ -23,7 +23,7 @@ public:
 // colour.
 class PointLight : public LightSource {
 public:
-	PointLight( Point3D pos, Colour col ) : _pos(pos), _col(col), _flux(2.0) {}
+	PointLight( Point3D pos, Colour col ) : _pos(pos), _col(col), _flux(4.0) {}
 	PointLight( Point3D pos, Colour col, double flux) :
 			_pos(pos), _col(col), _flux(flux) {}
 	void shade( Ray3D& ray );
@@ -37,7 +37,7 @@ private:
 class BallLight : public LightSource {
 public:
 	BallLight( Point3D pos, double radius, Colour col) : _pos(pos),
-			_radius(radius), _col(col), _flux(2) {}
+			_radius(radius), _col(col), _flux(4.0) {}
 	BallLight( Point3D pos, double radius, Colour col, double flux) :
 			_pos(pos), _radius(radius), _col(col), _flux(flux) {}
 	void shade( Ray3D& ray );

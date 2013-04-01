@@ -60,16 +60,15 @@ void PointLight::shade( Ray3D& ray ) {
 	
 	Vector3D n = i.normal;
 	n.normalize();
-	Vector3D d = -ray.dir;
+	Vector3D d = ray.dir;
 	d.normalize();
 	Vector3D c = _pos - i.point;	// camera relative coord
 	c.normalize();
+	Vector3D t = d - (2*d.dot(n))*n;	// theoretical specular direction
 	
 	// calculate each phong term
 	float diffuse = n.dot(c);
-	// specular requires finding the theoretical reflection, t
-	Vector3D t = (2*diffuse)*n - c;
-	float specular = d.dot(t);
+	float specular = t.dot(c);
 	
 	// clamp the lower bounds
 	if (diffuse < 0) { diffuse = 0; }
@@ -143,7 +142,7 @@ void BallLight::shade( Ray3D& ray ) {
 	
 	Vector3D n = i.normal;
 	n.normalize();
-	Vector3D d = -ray.dir;
+	Vector3D d = ray.dir;
 	d.normalize();
 	
 	Vector3D c, t;
@@ -157,7 +156,11 @@ void BallLight::shade( Ray3D& ray ) {
 		t = d - (2*d.dot(n))*n;
 		
 		diffuse = n.dot(c);
-		specular = d.dot(t);
+		specular = t.dot(c);
+		
+		// clamp the lower bounds
+		if (diffuse < 0) { diffuse = 0; }
+		if (specular < 0) { specular = 0; }
 		
 		foreshortening_term = -get_normal(dflux).dot(t);
 		if (foreshortening_term > 1) {
@@ -166,10 +169,6 @@ void BallLight::shade( Ray3D& ray ) {
 		if (foreshortening_term <= 0) {
 			continue;
 		}
-		
-		// clamp the lower bounds
-		if (diffuse < 0) { diffuse = 0; }
-		if (specular < 0) { specular = 0; }
 		
 		current_colour = base_ambient + diffuse*base_diffuse +
 				pow(specular, m->specular_exp)*base_specular;
