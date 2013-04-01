@@ -473,7 +473,7 @@ int main(int argc, char* argv[])
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
 	
 	
-	raytracer.translate(cylinder, Vector3D(2, 0, -5));
+	raytracer.translate(cylinder, Vector3D(4, 0, -5));
 	raytracer.rotate(cylinder, 'x', -75); 
 	raytracer.scale(cylinder, Point3D(0, 0, 0), factor3);
 
