@@ -189,9 +189,57 @@ void Raytracer::computeShading( Ray3D& ray ) {
 
 		// Implement shadows here if needed.
 		
-		curLight->light->shade(ray);
+		curLight->light->shade(ray, this);
 		curLight = curLight->next;
 	}
+}
+
+/**
+ * This method is provided to light sources so they can send rays from the
+ * material to the light source
+ * The returned value is a number from 0.0 (meaning completely in shadow)
+ * to 1.0 (meaning light is unimpeded in that path)
+ * The ray is expected to have its intersection.t_value set to the light
+ * source (so no t >= t_value will be considered for shadows)
+ */
+double Raytracer::getLightTransmission( Ray3D& ray ) {
+	double transmission = 1.0;
+	double max_t_value = ray.intersection.t_value;
+	double dot_product;
+	
+	// This is pretty much traverse scene, but resets the t_value
+	// and intersection as it goes along
+	SceneDagNode *node = _root;
+	SceneDagNode *childPtr;
+	
+	_modelToWorld = _modelToWorld*node->trans;
+	_worldToModel = node->invtrans*_worldToModel;
+	if (node->obj) {
+		// Imagine there is no intersection and perform intersection
+		ray.intersection.none = true;
+		if (node->obj->intersect(ray, _worldToModel, _modelToWorld)) {
+			if (ray.intersection.t_value < max_t_value) {
+				ray.dir.normalize();
+				ray.intersection.normal.normalize();
+				dot_product = ray.dir.dot(ray.intersection.normal);
+				transmission = transmission * dot_product *
+						dot_product * node->mat->transitivity;
+			}
+		}
+	}
+	// Traverse the children.
+	childPtr = node->child;
+	while (childPtr != NULL) {
+		transmission = transmission * getLightTransmission(ray);
+		childPtr = childPtr->next;
+	}
+
+	// Removes transformation of the current node from the global
+	// transformation matrices
+	_worldToModel = node->trans*_worldToModel;
+	_modelToWorld = _modelToWorld*node->invtrans;
+	
+	return transmission;
 }
 
 void Raytracer::initPixelBuffer() {
