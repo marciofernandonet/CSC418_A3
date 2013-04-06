@@ -488,18 +488,32 @@ int main(int argc, char* argv[])
 	
 	#ifdef USE_EXTENDEDLIGHTS
 	fprintf(stderr, "\tExtended light sources\n");
+	#else
+	fprintf(stderr, "\tPoint light sources\n");
 	#endif
 	
 	#ifdef USE_REFRACTIONS
 	fprintf(stderr, "\tRefractions\n");
+	#else
+	fprintf(stderr, "\tNo refractions\n");
 	#endif
 	
 	#ifdef USE_REFLECTIONS
 	fprintf(stderr, "\tReflections\n");
+	#else
+	fprintf(stderr, "\tNo reflections\n");
 	#endif
 	
 	#ifdef USE_TRANSMISSIONSHADOWS
 	fprintf(stderr, "\tTransmission-based shadows\n");
+	#else
+	fprintf(stderr, "\tSimple shadows\n");
+	#endif
+	
+	#ifdef USE_FINERFLUX
+	fprintf(stderr, "\tFiner numerical flux intergrations\n");
+	#else
+	fprintf(stderr, "\tCoarser numerical flux intergrations\n");
 	#endif
 
 	if (argc == 3) {

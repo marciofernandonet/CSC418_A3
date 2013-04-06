@@ -28,10 +28,11 @@
 #define MAX_REFRACTIONS (5)
 #endif
 
-//~ #define USE_EXTENDEDLIGHTS
-//~ #define USE_REFRACTIONS
-//~ #define USE_TRANSMISSIONSHADOWS
+#define USE_EXTENDEDLIGHTS
+#define USE_REFRACTIONS
+#define USE_TRANSMISSIONSHADOWS
 //~ #define USE_REFLECTIONS
+//~ #define USE_FINERFLUX
 
 class Point3D {
 public:

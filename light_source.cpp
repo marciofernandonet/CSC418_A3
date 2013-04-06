@@ -138,8 +138,18 @@ void BallLight::shade( Ray3D& ray, Raytracer *raytracer ) {
 	float foreshortening_term;
 	Ray3D r;
 	double transmission;
+	double effective_flux;
 	
+	#ifdef USE_FINERFLUX
+	effective_flux = _flux;
 	for (int dflux = 0; dflux < num_elems; dflux++) {
+	#else
+	effective_flux = _flux * 4 * 2;
+	int dflux;
+	for (int innerflux = 0; innerflux < 4; innerflux++) {
+	for (int outerflux = 0; outerflux < num_elems/8; outerflux += 4) {
+		dflux = 8*outerflux + 2*innerflux;
+	#endif
 		c = get_position(dflux) - i.point;
 		c.normalize();
 		t = d - (2*d.dot(n))*n;
@@ -167,8 +177,11 @@ void BallLight::shade( Ray3D& ray, Raytracer *raytracer ) {
 		current_colour = base_ambient + transmission * diffuse*base_diffuse +
 				transmission * pow(specular, m->specular_exp)*base_specular;
 		
-		ray.col = ray.col + ((foreshortening_term * _flux / double(num_elems)) *
+		ray.col = ray.col + ((foreshortening_term * effective_flux / double(num_elems)) *
 				current_colour);
+	#ifndef USE_FINERFLUX
+	}
+	#endif
 	}
 	ray.col.clamp();
 }
