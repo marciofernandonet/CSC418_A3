@@ -189,7 +189,7 @@ void Raytracer::computeShading( Ray3D& ray ) {
 
 		// Implement shadows here if needed.
 		
-		curLight->light->shade(ray, this);
+		curLight->light->shade(ray);
 		curLight = curLight->next;
 	}
 }
