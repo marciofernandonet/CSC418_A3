@@ -16,6 +16,7 @@
 #include <cmath>
 #include <iostream>
 #include <cstdlib>
+#include <unistd.h>
 
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
@@ -189,7 +190,7 @@ void Raytracer::computeShading( Ray3D& ray ) {
 
 		// Implement shadows here if needed.
 		
-		curLight->light->shade(ray);
+		curLight->light->shade(ray, this);
 		curLight = curLight->next;
 	}
 }
