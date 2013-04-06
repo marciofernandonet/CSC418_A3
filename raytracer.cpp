@@ -203,13 +203,16 @@ void Raytracer::computeShading( Ray3D& ray ) {
  * source (so no t >= t_value will be considered for shadows)
  */
 double Raytracer::getLightTransmission( Ray3D& ray ) {
+	return getLightTransmissionRecurse(_root, ray);
+}
+
+double Raytracer::getLightTransmissionRecurse( SceneDagNode* node, Ray3D& ray ) {
 	double transmission = 1.0;
 	double max_t_value = ray.intersection.t_value;
 	double dot_product;
 	
 	// This is pretty much traverse scene, but resets the t_value
 	// and intersection as it goes along
-	SceneDagNode *node = _root;
 	SceneDagNode *childPtr;
 	
 	_modelToWorld = _modelToWorld*node->trans;
@@ -230,7 +233,8 @@ double Raytracer::getLightTransmission( Ray3D& ray ) {
 	// Traverse the children.
 	childPtr = node->child;
 	while (childPtr != NULL) {
-		transmission = transmission * getLightTransmission(ray);
+		transmission = transmission *
+				getLightTransmissionRecurse(childPtr, ray);
 		childPtr = childPtr->next;
 	}
 
@@ -407,7 +411,7 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			
 			Ray3D ray = Ray3D(transformedOrigin, transformedPixelVector);
 
-			Colour col = shadeRay(ray); 
+			Colour col = shadeRay(ray);
 			
 			superi = i*_aaLevel + m;
 			superj = j*_aaLevel + n;
@@ -493,19 +497,13 @@ int main(int argc, char* argv[])
 	//~ raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
 				//~ Colour(0.9, 0.9, 0.9) ) );
 	// Defines a ball light source
-	raytracer.addLightSource( new BallLight(Point3D(-5, 1, 10),
-			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
-	raytracer.addLightSource( new BallLight(Point3D(5, -1, 10),
-			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
-	raytracer.addLightSource( new BallLight(Point3D(0, 0, 16),
-			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
-	raytracer.addLightSource( new BallLight(Point3D(0, 0, -10),
-			5.0, Colour(0.9, 0.9, 0.9), 1.666) );
+	raytracer.addLightSource( new BallLight(Point3D(0, 0, 7),
+			2.0, Colour(0.9, 0.9, 0.9), 3) );
 
 	// Add a unit square into the scene with material mat.
 	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass);
 	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade);
-	SceneDagNode* cylinder = raytracer.addObject( new UnitCylinder(), &gold);
+	//~ SceneDagNode* cylinder = raytracer.addObject( new UnitCylinder(), &gold);
 	
 	// Apply some transformations to the unit square.
 	double factor1[3] = { 1.0, 2.0, 1.0 };
@@ -521,9 +519,9 @@ int main(int argc, char* argv[])
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
 	
 	
-	raytracer.translate(cylinder, Vector3D(4, 0, -5));
-	raytracer.rotate(cylinder, 'x', -75); 
-	raytracer.scale(cylinder, Point3D(0, 0, 0), factor3);
+	//~ raytracer.translate(cylinder, Vector3D(4, 0, -5));
+	//~ raytracer.rotate(cylinder, 'x', -75); 
+	//~ raytracer.scale(cylinder, Point3D(0, 0, 0), factor3);
 
 	
 

@@ -8,39 +8,41 @@
 
 ***********************************************************/
 
+#ifndef _LIGHT_SOURCE_H_
+#define _LIGHT_SOURCE_H_
+
 #include "util.h"
 
-// Base class for a light source.  You could define different types
-// of lights here, but point light is sufficient for most scenes you
-// might want to render.  Different light sources shade the ray 
-// differently.
+class Raytracer;
+
+// Light sources are given a shade method that accepts the raytracer
+// object itself
+// This is required for performing shadow computations
 class LightSource {
 public:
-	virtual void shade( Ray3D& ray ) = 0;
+	virtual void shade( Ray3D& ray, Raytracer *raytracer ) = 0;
 };
 
 // A point light is defined by its position in world space and its
 // colour.
 class PointLight : public LightSource {
 public:
-	PointLight( Point3D pos, Colour col ) : _pos(pos), _col(col), _flux(4.0) {}
-	PointLight( Point3D pos, Colour col, double flux) :
-			_pos(pos), _col(col), _flux(flux) {}
-	void shade( Ray3D& ray );
-	Vector3D get_normal( int integrativeElement );
+	PointLight( Point3D pos, Colour col ) : _pos(pos), _col(col) {}
+	void shade( Ray3D& ray, Raytracer *raytracer );
 private:
 	Point3D _pos;
 	Colour _col;
-	double _flux;
 };
 
+// A very simple extended light source, but it demonstrates the effects
+// of foreshortening and will produce soft shadows
 class BallLight : public LightSource {
 public:
 	BallLight( Point3D pos, double radius, Colour col) : _pos(pos),
 			_radius(radius), _col(col), _flux(4.0) {}
 	BallLight( Point3D pos, double radius, Colour col, double flux) :
 			_pos(pos), _radius(radius), _col(col), _flux(flux) {}
-	void shade( Ray3D& ray );
+	void shade( Ray3D& ray, Raytracer *raytracer );
 	Vector3D get_normal( int integrativeElement );
 	Point3D get_position( int integrativeElement );
 private:
@@ -49,3 +51,5 @@ private:
 	Colour _col;
 	double _flux;
 };
+
+#endif	// _LIGHT_SOURCE_H_

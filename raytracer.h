@@ -132,6 +132,8 @@ private:
 	// with all light sources in the scene.
 	void computeShading( Ray3D& ray );
 	
+	double getLightTransmissionRecurse( SceneDagNode *node, Ray3D& ray );
+	
 	// Width and height of the viewport.
 	int _scrWidth;
 	int _scrHeight;
