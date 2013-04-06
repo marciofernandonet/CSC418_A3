@@ -37,6 +37,8 @@ void PointLight::shade( Ray3D& ray, Raytracer *raytracer ) {
 
 	Intersection i = ray.intersection;
 	Material *m = i.mat;	// material properties
+	Ray3D r;
+	double transmission;
 
 	Vector3D n = i.normal;
 	n.normalize();
@@ -54,13 +56,18 @@ void PointLight::shade( Ray3D& ray, Raytracer *raytracer ) {
 	// clamp the lower bounds
 	if (diffuse < 0) { diffuse = 0; }
 	if (specular < 0) { specular = 0; }
-
+	
+	// figure out the shadow term
+	r = Ray3D(i.point + 0.05*c, c);
+	r.intersection.t_value = (_pos - i.point).length();
+	transmission = raytracer->getLightTransmission(r);
+	
 	// apply the phong shading formula
 	Colour base_ambient = m->ambient * _col;
 	Colour base_diffuse = m->diffuse * _col;
 	Colour base_specular = m->specular * _col;
-	ray.col = base_ambient + diffuse*base_diffuse +
-			pow(specular, m->specular_exp)*base_specular;
+	ray.col = base_ambient + transmission * diffuse*base_diffuse +
+			transmission * pow(specular, m->specular_exp)*base_specular;
 	// clamp the upper bounds
 	ray.col.clamp();
 }

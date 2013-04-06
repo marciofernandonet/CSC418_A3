@@ -13,10 +13,10 @@
 
 #include "raytracer.h"
 #include "bmp_io.h"
+#include "util.h"
 #include <cmath>
 #include <iostream>
 #include <cstdlib>
-#include <unistd.h>
 
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
@@ -204,7 +204,18 @@ void Raytracer::computeShading( Ray3D& ray ) {
  * source (so no t >= t_value will be considered for shadows)
  */
 double Raytracer::getLightTransmission( Ray3D& ray ) {
+	#ifdef USE_TRANSMISSIONSHADOWS
 	return getLightTransmissionRecurse(_root, ray);
+	#else
+	// less expensive algorithm
+	double max_t_value = ray.intersection.t_value;
+	ray.intersection.none = true;
+	traverseScene(_root, ray);
+	if (ray.intersection.t_value < max_t_value) {
+		return 0.1;	// looks more natural
+	}
+	return 1.0;
+	#endif
 }
 
 double Raytracer::getLightTransmissionRecurse( SceneDagNode* node, Ray3D& ray ) {
@@ -291,6 +302,7 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 	if (!ray.intersection.none) {
 		computeShading(ray);
 		
+		#ifdef USE_REFLECTIONS
 		if ((ray.reflections < MAX_REFLECTIONS) /*&& (ray.refractions <3)*/) {
 			// emit another ray
 			Vector3D n = ray.intersection.normal;
@@ -310,9 +322,13 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 		} else {
 			col = ray.col;
 		}
+		#else
+		col = ray.col;
+		#endif
 		// Check for refractions		
 		// Don't check for refractions of reflected rays
 		
+		#ifdef USE_REFRACTIONS
 		if((ray.intersection.mat->transitivity >= 0.1) && (ray.refractions < MAX_REFRACTIONS) ){ //i.e., don't refract reflected rays
 			double c1 = ray.cLight;
 			double c2 = ray.intersection.mat->cLight;
@@ -354,6 +370,7 @@ Colour Raytracer::shadeRay( Ray3D& ray ) {
 				col = (1-matTran)*col + matTran*colRefract;
 			}
 		}
+		#endif
 		
 	}
 	
@@ -466,6 +483,24 @@ int main(int argc, char* argv[])
 	int width = 320; 
 	int height = 240; 
 	int aa = 2;
+	
+	fprintf(stderr, "Using options:\n");
+	
+	#ifdef USE_EXTENDEDLIGHTS
+	fprintf(stderr, "\tExtended light sources\n");
+	#endif
+	
+	#ifdef USE_REFRACTIONS
+	fprintf(stderr, "\tRefractions\n");
+	#endif
+	
+	#ifdef USE_REFLECTIONS
+	fprintf(stderr, "\tReflections\n");
+	#endif
+	
+	#ifdef USE_TRANSMISSIONSHADOWS
+	fprintf(stderr, "\tTransmission-based shadows\n");
+	#endif
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -494,12 +529,15 @@ int main(int argc, char* argv[])
 
 	Material glass( Colour(0.15, 0.15, 0.15), Colour(0.08, 0.08, 0.08), Colour(0.2, 0.2, 0.2), 10.1,0.05,0.9,1/1.5 );
 
-	// Defines a point light source.
-	//~ raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
-				//~ Colour(0.9, 0.9, 0.9) ) );
+	#ifdef USE_EXTENDEDLIGHTS
 	// Defines a ball light source
 	raytracer.addLightSource( new BallLight(Point3D(0, 0, 7),
 			2.0, Colour(0.9, 0.9, 0.9), 3) );
+	#else
+	// Defines a point light source.
+	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
+				Colour(0.9, 0.9, 0.9) ) );
+	#endif
 
 	// Add a unit square into the scene with material mat.
 	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass);
