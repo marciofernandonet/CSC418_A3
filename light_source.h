@@ -20,7 +20,7 @@ class Raytracer;
 // This is required for performing shadow computations
 class LightSource {
 public:
-	virtual void shade( Ray3D& ray, Raytracer *raytracer ) = 0;
+	virtual void shade( Ray3D& ray, Raytracer *raytracer, char renderStyle) = 0;
 };
 
 // A point light is defined by its position in world space and its
@@ -28,7 +28,7 @@ public:
 class PointLight : public LightSource {
 public:
 	PointLight( Point3D pos, Colour col ) : _pos(pos), _col(col) {}
-	void shade( Ray3D& ray, Raytracer *raytracer );
+	void shade( Ray3D& ray, Raytracer *raytracer, char renderStyle );
 private:
 	Point3D _pos;
 	Colour _col;
@@ -42,7 +42,7 @@ public:
 			_radius(radius), _col(col), _flux(4.0) {}
 	BallLight( Point3D pos, double radius, Colour col, double flux) :
 			_pos(pos), _radius(radius), _col(col), _flux(flux) {}
-	void shade( Ray3D& ray, Raytracer *raytracer );
+	void shade( Ray3D& ray, Raytracer *raytracer, char renderStyle );
 	Vector3D get_normal( int integrativeElement );
 	Point3D get_position( int integrativeElement );
 private:

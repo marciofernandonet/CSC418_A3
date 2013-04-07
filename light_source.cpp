@@ -26,7 +26,7 @@ static const double cos_table[] = {1.0, 0.9238795350747775,
 -0.7071068285536788, -0.3826835004420441, 0.0, 0.3826833519105045,
 0.7071067148725588, 0.9238794940589211};
 
-void PointLight::shade( Ray3D& ray, Raytracer *raytracer ) {
+void PointLight::shade( Ray3D& ray, Raytracer *raytracer, char renderStyle ) {
 	// The pointlight is simplified as much as possible to perform
 	// fast raytracing - doesn't actually use the raytracer object
 	// or look at the scene, but it's here for satisfying the parameter
@@ -70,9 +70,13 @@ void PointLight::shade( Ray3D& ray, Raytracer *raytracer ) {
 	Colour base_specular = m->specular * _col;
 
 	
-	//ray.col = ray.col + basic_colour;
-	ray.col = base_ambient + transmission * diffuse*base_diffuse +
+	if(renderStyle == 'd'){
+		ray.col = base_ambient + transmission * diffuse*base_diffuse;
+	}else{
+		ray.col = base_ambient + transmission * diffuse*base_diffuse +
 			transmission * pow(specular, m->specular_exp)*base_specular;
+	}
+	
 	// clamp the upper bounds
 	ray.col.clamp();
 }
@@ -114,7 +118,7 @@ Point3D BallLight::get_position(int integrativeElement) {
  * and its foreshortening/shadow effects on the intersecting ray
  * This is very computationally complex, but looks amazing!
  */
-void BallLight::shade( Ray3D& ray, Raytracer *raytracer ) {
+void BallLight::shade( Ray3D& ray, Raytracer *raytracer, char renderStyle) {
 	if (ray.intersection.none) {
 		return;
 	}
@@ -179,8 +183,13 @@ void BallLight::shade( Ray3D& ray, Raytracer *raytracer ) {
 			continue;
 		}
 		
-		current_colour = base_ambient + transmission * diffuse*base_diffuse +
+		if(renderStyle == 'd'){
+			current_colour = base_ambient + transmission * diffuse*base_diffuse;
+		}else{
+			current_colour = base_ambient + transmission * diffuse*base_diffuse +
 				transmission * pow(specular, m->specular_exp)*base_specular;
+		}
+		
 		
 		ray.col = ray.col + ((foreshortening_term * effective_flux / double(num_elems)) *
 				current_colour);

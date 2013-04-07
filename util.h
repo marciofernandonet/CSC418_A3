@@ -21,7 +21,7 @@
 #endif
 
 #ifndef MAX_REFLECTIONS
-#define MAX_REFLECTIONS	(3)
+#define MAX_REFLECTIONS	(4)
 #endif
 
 #ifndef MAX_REFRACTIONS 

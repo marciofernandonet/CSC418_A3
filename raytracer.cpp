@@ -181,7 +181,7 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray ) {
 	_modelToWorld = _modelToWorld*node->invtrans;
 }
 
-void Raytracer::computeShading( Ray3D& ray ) {
+void Raytracer::computeShading( Ray3D& ray, char renderStyle) {
 	if (ray.intersection.none) { return; }	// don't bother checking
 	LightListNode* curLight = _lightSource;
 	for (;;) {
@@ -190,7 +190,7 @@ void Raytracer::computeShading( Ray3D& ray ) {
 
 		// Implement shadows here if needed.
 		
-		curLight->light->shade(ray, this);
+		curLight->light->shade(ray, this, renderStyle);
 		curLight = curLight->next;
 	}
 }
@@ -306,11 +306,11 @@ Colour Raytracer::shadeRay( Ray3D& ray, char renderStyle ) {
 	if (!ray.intersection.none) {
 		//computeShading(ray);
 		if (renderStyle != 's'){
-			computeShading(ray);
+			computeShading(ray, renderStyle);
 			col = ray.col;
 			   
 			#ifdef USE_REFLECTIONS
-			if ((ray.intersection.mat->reflectivity >= 0.01) && (ray.reflections < MAX_REFLECTIONS) /*&& (ray.refractions <3)*/) {
+			if ((ray.intersection.mat->reflectivity >= 0.01) && (ray.reflections < MAX_REFLECTIONS) && (renderStyle != 'd')) {
 				// emit another ray
 				Vector3D n = ray.intersection.normal;
 				n.normalize();
@@ -338,7 +338,7 @@ Colour Raytracer::shadeRay( Ray3D& ray, char renderStyle ) {
 			// Check for refractions		
 			// Don't check for refractions of reflected rays
 			#ifdef USE_REFRACTIONS
-			if((ray.intersection.mat->transitivity >= 0.1) && (ray.refractions < MAX_REFRACTIONS)){ 
+			if((ray.intersection.mat->transitivity >= 0.1) && (ray.refractions < MAX_REFRACTIONS) && (renderStyle != 'd')){ 
 				double c1 = ray.cLight;
 				double c2 = ray.intersection.mat->cLight;
 				if (ray.cLight < 0.99){//Ray leaves object to air/vacuum
@@ -524,7 +524,7 @@ int main(int argc, char* argv[])
 	fprintf(stderr, "\tNo reflections\n");
 	#endif
 	 
-	#if def IGNORE_SHADOWS
+	#ifdef IGNORE_SHADOWS
 		fprintf(stderr, "\tNo shadows\n");
 	#else{
 		#ifdef USE_TRANSMISSIONSHADOWS
@@ -626,7 +626,7 @@ int main(int argc, char* argv[])
 			Colour(0.256777, 0.137622, 0.086014), 12.8, 0.1, 0.0, 1.0 );
 	
 	Material copperPolished(Colour(0.2295, 0.08825, 0.0275), Colour(0.5508, 0.2118, 0.066), 
-			Colour(0.580594, 0.223257, 0.0695701), 51.2, 0.1, 0.0, 1.0 );
+			Colour(0.580594, 0.223257, 0.0695701), 51.2, 0.15, 0.0, 1.0 );
 	
 	Material pewter(Colour(0.105882, 0.058824, 0.113725), Colour(0.427451, 0.470588, 0.541176), 
 			Colour(0.333333, 0.333333, 0.521569), 9.84615, 0.0, 0.0, 1.0 );
@@ -734,7 +734,7 @@ int main(int argc, char* argv[])
 
 		SceneDagNode* planeBack = raytracer.addObject( new UnitSquare(), &brass);
 		SceneDagNode* planeBottom = raytracer.addObject( new UnitSquare(), &chrome);
-		SceneDagNode* planeTop = raytracer.addObject( new UnitSquare(), &gold);
+		SceneDagNode* planeTop = raytracer.addObject( new UnitSquare(), &copperPolished);
 		SceneDagNode* planeLeft = raytracer.addObject( new UnitSquare(), &bronzeShiny);
 		SceneDagNode* planeRight = raytracer.addObject( new UnitSquare(), &brass);
 		SceneDagNode* planeRear = raytracer.addObject( new UnitSquare(), &brass);
@@ -859,10 +859,11 @@ int main(int argc, char* argv[])
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
-	//raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp");
-	//raytracer.render(width, height, eye, view, up, fov, aa,  "sig1.bmp", 's');
+
+	raytracer.render(width, height, eye, view, up, fov, aa,  "sig1.bmp", 's');
+	raytracer.render(width, height, eye, view, up, fov, aa, "diffuse1.bmp",'d');
 	raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp",'p');
-	//raytracer.render(width, height, eye, view, up, fov, aa, "diffuse1.bmp",'d');
+	
 	
 	
 
@@ -870,18 +871,20 @@ int main(int argc, char* argv[])
 	// Render it from a different point of view.
 	Point3D eye2(4, 2, 1);
 	Vector3D view2(-4, -2, -6);
-	//raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp");
-	//raytracer.render(width, height, eye2, view2, up, fov, aa, "sig2.bmp", 's');
+	
+	raytracer.render(width, height, eye2, view2, up, fov, aa, "sig2.bmp", 's');
+	raytracer.render(width, height, eye2, view2, up, fov, aa, "diffuse2.bmp",'d');
 	raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp",'p');
-	//raytracer.render(width, height, eye2, view2, up, fov, aa, "diffuse2.bmp",'d');
+	
 	
 	
 	Point3D eye3(-4, -2, 1);
 	Vector3D view3(4, 2, -6);
-	//raytracer.render(width, height, eye3, view3, up, fov, aa, "view3.bmp");
-	//raytracer.render(width, height, eye3, view3, up, fov, aa, "sig3.bmp", 's');
+
+	raytracer.render(width, height, eye3, view3, up, fov, aa, "sig3.bmp", 's');
+	raytracer.render(width, height, eye3, view3, up, fov, aa, "diffuse3.bmp",'d');
 	raytracer.render(width, height, eye3, view3, up, fov, aa, "view3.bmp",'p');
-	//raytracer.render(width, height, eye3, view3, up, fov, aa, "diffuse3.bmp",'d');
+	
 	
 	
 	
