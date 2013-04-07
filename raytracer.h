@@ -11,6 +11,9 @@
 
 ***********************************************************/
 
+#ifndef _RAYTRACER_H_
+#define _RAYTRACER_H_
+
 #include "util.h"
 #include "scene_object.h"
 #include "light_source.h"
@@ -99,6 +102,8 @@ public:
 	// Apply scaling about a fixed point origin.
 	void scale( SceneDagNode* node, Point3D origin, double factor[3] );
 	
+	// Get the transmission of the given ray through this scene.
+	double getLightTransmission( Ray3D& ray );
 private:
 	// Allocates and initializes the pixel buffer for rendering, you
 	// could add an interesting background to your scene by modifying 
@@ -127,6 +132,8 @@ private:
 	// with all light sources in the scene.
 	void computeShading( Ray3D& ray );
 	
+	double getLightTransmissionRecurse( SceneDagNode *node, Ray3D& ray );
+	
 	// Width and height of the viewport.
 	int _scrWidth;
 	int _scrHeight;
@@ -153,3 +160,5 @@ private:
 	Matrix4x4 _modelToWorld;
 	Matrix4x4 _worldToModel;
 };
+
+#endif /* _RAYTRACER_H_ */

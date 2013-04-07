@@ -13,6 +13,7 @@
 
 #include "raytracer.h"
 #include "bmp_io.h"
+#include "util.h"
 #include <cmath>
 #include <iostream>
 #include <cstdlib>
@@ -189,9 +190,76 @@ void Raytracer::computeShading( Ray3D& ray ) {
 
 		// Implement shadows here if needed.
 		
-		curLight->light->shade(ray);
+		curLight->light->shade(ray, this);
 		curLight = curLight->next;
 	}
+}
+
+/**
+ * This method is provided to light sources so they can send rays from the
+ * material to the light source
+ * The returned value is a number from 0.0 (meaning completely in shadow)
+ * to 1.0 (meaning light is unimpeded in that path)
+ * The ray is expected to have its intersection.t_value set to the light
+ * source (so no t >= t_value will be considered for shadows)
+ */
+double Raytracer::getLightTransmission( Ray3D& ray ) {
+	#ifdef IGNORE_SHADOWS
+	return 1.0;
+	#endif
+
+	#ifdef USE_TRANSMISSIONSHADOWS
+	return getLightTransmissionRecurse(_root, ray);
+	#else
+	// less expensive algorithm
+	double max_t_value = ray.intersection.t_value;
+	ray.intersection.none = true;
+	traverseScene(_root, ray);
+	if (ray.intersection.t_value < max_t_value) {
+		return 0.1;	// looks more natural
+	}
+	return 1.0;
+	#endif
+}
+
+double Raytracer::getLightTransmissionRecurse( SceneDagNode* node, Ray3D& ray ) {
+	double transmission = 1.0;
+	double max_t_value = ray.intersection.t_value;
+	double dot_product;
+	
+	// This is pretty much traverse scene, but resets the t_value
+	// and intersection as it goes along
+	SceneDagNode *childPtr;
+	
+	_modelToWorld = _modelToWorld*node->trans;
+	_worldToModel = node->invtrans*_worldToModel;
+	if (node->obj) {
+		// Imagine there is no intersection and perform intersection
+		ray.intersection.none = true;
+		if (node->obj->intersect(ray, _worldToModel, _modelToWorld)) {
+			if (ray.intersection.t_value < max_t_value) {
+				ray.dir.normalize();
+				ray.intersection.normal.normalize();
+				dot_product = ray.dir.dot(ray.intersection.normal);
+				transmission = transmission * dot_product *
+						dot_product * node->mat->transitivity;
+			}
+		}
+	}
+	// Traverse the children.
+	childPtr = node->child;
+	while (childPtr != NULL) {
+		transmission = transmission *
+				getLightTransmissionRecurse(childPtr, ray);
+		childPtr = childPtr->next;
+	}
+
+	// Removes transformation of the current node from the global
+	// transformation matrices
+	_worldToModel = node->trans*_worldToModel;
+	_modelToWorld = _modelToWorld*node->invtrans;
+	
+	return transmission;
 }
 
 void Raytracer::initPixelBuffer() {
@@ -241,14 +309,15 @@ Colour Raytracer::shadeRay( Ray3D& ray, char renderStyle ) {
 			computeShading(ray);
 			col = ray.col;
 			   
-		
-		
+			#ifdef USE_REFLECTIONS
 			if ((ray.intersection.mat->reflectivity >= 0.01) && (ray.reflections < MAX_REFLECTIONS) /*&& (ray.refractions <3)*/) {
 				// emit another ray
 				Vector3D n = ray.intersection.normal;
 				n.normalize();
 				Vector3D d = ray.dir;
 				d.normalize();
+	
+
 			
 				double dot = n.dot(d);
 				Vector3D newdir = d - (2 * dot * n);
@@ -257,22 +326,26 @@ Colour Raytracer::shadeRay( Ray3D& ray, char renderStyle ) {
 						newdir, ray.reflections+1, ray.refractions, ray.cLight);
 				Colour secondaryColour = shadeRay(newRay, renderStyle);
 			
+
 				double ref = ray.intersection.mat->reflectivity;
 				col = (1-ref)*ray.col + ref*secondaryColour;
-			} /*else {
+			} else {
 				col = ray.col;
-			}*/
+			}
+			#else
+			col = ray.col;
+			#endif
 			// Check for refractions		
 			// Don't check for refractions of reflected rays
-		
+			#ifdef USE_REFRACTIONS
 			if((ray.intersection.mat->transitivity >= 0.1) && (ray.refractions < MAX_REFRACTIONS)){ 
 				double c1 = ray.cLight;
 				double c2 = ray.intersection.mat->cLight;
 				if (ray.cLight < 0.99){//Ray leaves object to air/vacuum
 					c2= 1;
 				}
+
 			
-		
 				Vector3D n = ray.intersection.normal;
 				n.normalize();
 				Vector3D d = ray.dir;
@@ -302,13 +375,15 @@ Colour Raytracer::shadeRay( Ray3D& ray, char renderStyle ) {
 			
 				Ray3D refractRay = Ray3D(ray.intersection.point + 0.0001*refractDir, refractDir,ray.reflections, ray.refractions+1, c2 );
 
+
 				Colour colRefract = shadeRay(refractRay, renderStyle);
 				double matTran = ray.intersection.mat->transitivity;
 				if(!refractRay.intersection.none){ //Refracted ray does not go off into space
 					col = (1-matTran)*col + matTran*colRefract;
 				}
 			}//end of refractions
-		
+			#endif
+
 		}//End of check if(renderStyle != 's')
 		else{ //renderStyle == 's'
 			col = (*(ray.intersection.mat)).diffuse;
@@ -316,7 +391,7 @@ Colour Raytracer::shadeRay( Ray3D& ray, char renderStyle ) {
 	}//End of check if (!ray.intersection.none) 
 	
 	return col; 
-}	
+}// End of shadeRay	
 
 void Raytracer::render( int width, int height, Point3D eye, Vector3D view, 
 		Vector3D up, double fov, int AA_level, char* fileName, char renderStyle ) {
@@ -371,8 +446,6 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			Ray3D ray = Ray3D(transformedOrigin, transformedPixelVector);
 			
 			//Check for scene render style
-			
-
 			Colour col = shadeRay(ray, renderStyle); 
 			
 			superi = i*_aaLevel + m;
@@ -383,9 +456,9 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			_superbbuffer[superi*(_aaLevel*_scrWidth)+superj] = int(col[2]*255);
 			
 			}
-			}
+			}//End supersampling loop
 		}
-	}
+	}//finsihed pixel loop
 	
 	// Now average out the pixels from the super buffer (supersampling)
 	factor = double(1)/(_aaLevel * _aaLevel);
@@ -431,6 +504,44 @@ int main(int argc, char* argv[])
 
 	double toRadian = 2*M_PI/360.0;
 
+	fprintf(stderr, "Using options:\n");
+	
+	#ifdef USE_EXTENDEDLIGHTS
+	fprintf(stderr, "\tExtended light sources\n");
+	#else
+	fprintf(stderr, "\tPoint light sources\n");
+	#endif
+	
+	#ifdef USE_REFRACTIONS
+	fprintf(stderr, "\tRefractions\n");
+	#else
+	fprintf(stderr, "\tNo refractions\n");
+	#endif
+	
+	#ifdef USE_REFLECTIONS
+	fprintf(stderr, "\tReflections\n");
+	#else
+	fprintf(stderr, "\tNo reflections\n");
+	#endif
+	 
+	#if def IGNORE_SHADOWS
+		fprintf(stderr, "\tNo shadows\n");
+	#else{
+		#ifdef USE_TRANSMISSIONSHADOWS
+		fprintf(stderr, "\tTransmission-based shadows\n");
+		#else
+		fprintf(stderr, "\tSimple shadows\n");
+		#endif
+	 }
+	#endif
+	
+	#ifdef USE_FINERFLUX
+	fprintf(stderr, "\tFiner numerical flux intergrations\n");
+	#else
+	fprintf(stderr, "\tCoarser numerical flux intergrations\n");
+	#endif
+
+
 	if (argc == 3) {
 		width = atoi(argv[1]);
 		height = atoi(argv[2]);
@@ -444,7 +555,8 @@ int main(int argc, char* argv[])
 		aa = atoi(argv[3]);
 		sceneNum = atoi(argv[4]);
 	}
-	if (sceneNum > 3){
+	// SceneNum should not exceed total scenes
+	if ((sceneNum > 3)|| (sceneNum <0)){
 		sceneNum = 0;
 	}
 	// Camera parameters.
@@ -519,27 +631,27 @@ int main(int argc, char* argv[])
 	Material pewter(Colour(0.105882, 0.058824, 0.113725), Colour(0.427451, 0.470588, 0.541176), 
 			Colour(0.333333, 0.333333, 0.521569), 9.84615, 0.0, 0.0, 1.0 );
 
-	// Defines a point light source.
-	//~ raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
-				//~ Colour(0.9, 0.9, 0.9) ) );
 
-	
-	// Defines a ball light source
-	
-	//raytracer.addLightSource( new BallLight(Point3D(5, -1, 10),
-	//		10.0, Colour(0.9, 0.9, 0.9), 0.666) );
-	//raytracer.addLightSource( new BallLight(Point3D(0, 0, 16),
-	//		10.0, Colour(0.9, 0.9, 0.9), 0.666) );
-	//raytracer.addLightSource( new BallLight(Point3D(0, 0, -10),
-			//1.0, Colour(0.9, 0.9, 0.9), 1.666) );
-	
+	// Light Sources
+	//=====================	
 	//raytracer.addLightSource( new PointLight(Point3D(1, 1, 2),Colour(0.5, 0.5, 0.5)) );
+
+	#ifdef USE_EXTENDEDLIGHTS
+	// Defines a ball light source
+	raytracer.addLightSource( new BallLight(Point3D(0, 0, 7),
+			2.0, Colour(0.9, 0.9, 0.9), 3) );
+	#else
+	// Defines a point light source.
+	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
+				Colour(0.9, 0.9, 0.9) ) );
+	#endif
+
 
 	if (sceneNum==0){
 
 		// Defines a point light source.
-		raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
-					Colour(0.9, 0.9, 0.9) ) );
+		//raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
+		//			Colour(0.9, 0.9, 0.9) ) );
 
 		// Add a unit square into the scene with material mat.
 		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &turquoise);
@@ -571,16 +683,18 @@ int main(int argc, char* argv[])
 	}// end of scene 0
 
 	if (sceneNum==1){
-
+		/*
 		raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
 			5.0, Colour(0.9, 0.9, 0.9), 0.888) );
 		raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
+		*/
 
 		// Add a unit square into the scene with material mat.
 		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass);
 		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &gold);
 		SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade);
 		SceneDagNode* cylinder = raytracer.addObject( new UnitCone(), &gold);
+
 	
 		// Apply some transformations to the unit square.
 		double factor1[3] = { 1.0, 2.0, 1.0 };
@@ -610,10 +724,11 @@ int main(int argc, char* argv[])
 	//=====================================================
 
 	if(sceneNum == 2){
-
+		/*
 		raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
 			5.0, Colour(0.9, 0.9, 0.9), 0.888) );
 		raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
+		*/
 		//Set up walls
 		//========================================================
 
@@ -675,11 +790,12 @@ int main(int argc, char* argv[])
 	//==================== Scene 3 =================
 	//===============================================
 	if(sceneNum == 3){
-
+		/*
 		raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
 			5.0, Colour(0.9, 0.9, 0.9), 0.888) );
 		raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
 		//raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
+		*/
 
 		double factor1[3] = { 1.0, 1.0, 3.0 };
 		double factor2[3] = { 6.0, 6.0, 1.0 };
@@ -745,7 +861,7 @@ int main(int argc, char* argv[])
 	// testing purposes.	
 	//raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp");
 	//raytracer.render(width, height, eye, view, up, fov, aa,  "sig1.bmp", 's');
-	raytracer.render(width, height, eye, view, up, fov, aa, "phong1.bmp",'p');
+	raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp",'p');
 	//raytracer.render(width, height, eye, view, up, fov, aa, "diffuse1.bmp",'d');
 	
 	
@@ -756,7 +872,7 @@ int main(int argc, char* argv[])
 	Vector3D view2(-4, -2, -6);
 	//raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp");
 	//raytracer.render(width, height, eye2, view2, up, fov, aa, "sig2.bmp", 's');
-	raytracer.render(width, height, eye2, view2, up, fov, aa, "phong2.bmp",'p');
+	raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp",'p');
 	//raytracer.render(width, height, eye2, view2, up, fov, aa, "diffuse2.bmp",'d');
 	
 	
@@ -764,7 +880,7 @@ int main(int argc, char* argv[])
 	Vector3D view3(4, 2, -6);
 	//raytracer.render(width, height, eye3, view3, up, fov, aa, "view3.bmp");
 	//raytracer.render(width, height, eye3, view3, up, fov, aa, "sig3.bmp", 's');
-	raytracer.render(width, height, eye3, view3, up, fov, aa, "phong3.bmp",'p');
+	raytracer.render(width, height, eye3, view3, up, fov, aa, "view3.bmp",'p');
 	//raytracer.render(width, height, eye3, view3, up, fov, aa, "diffuse3.bmp",'d');
 	
 	
