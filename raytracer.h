@@ -68,7 +68,7 @@ public:
 	// positioned at eye, with view vector view, up vector up, and 
 	// field of view fov.
 	void render( int width, int height, Point3D eye, Vector3D view, 
-			Vector3D up, double fov, int AA_level, char* fileName );
+			Vector3D up, double fov, int AA_level, char* fileName, char renderStyle );
 
 	// Add an object into the scene, with material mat.  The function
 	// returns a handle to the object node you just added, use the 
@@ -113,7 +113,7 @@ private:
 
 	// Return the colour of the ray after intersection and shading, call 
 	// this function recursively for reflection and refraction.  
-	Colour shadeRay( Ray3D& ray ); 
+	Colour shadeRay( Ray3D& ray , char renderStyle); 
 
 	// Constructs a view to world transformation matrix based on the
 	// camera parameters.

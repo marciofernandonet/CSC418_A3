@@ -1,0 +1,245 @@
+
+
+CSC418 - Assignemt 3 - Report
+==============================
+==============================
+
+Overview
+--------------
+We have implemented all of the required parts for the basic ray tracer: ray casting,
+square and sphere intersections, and the Phong illumination model for point light 
+sources. Each of the implementations is desciribed in some detail below. 
+
+[Need scene signature + diffuse modes]
+[New command line arguments for these?]
+
+For the second part of the assignment we decided to extend the raytracer with 
+additional features. These include capacity to simulate multiple reflections 
+and refractions, interesctions with different geometic surfaces (cylinder, cone)
+and affinely transformed versions of these, spherically shaped ball light sources
+(i.e., lights finite and adjustable size), shadows for point and ball lights (the
+latter produce soft shadows). We also implemented anti-aliasing using supersampling.
+This is not the most efficient method of anti-aliasing, but is reasonable for
+small scenes and the effects do 
+
+We also drew a few test scenes to exhibit the capabilities of our raytracer. These
+scenes are not overly complex but they do show-off the effects descibed above. 
+
+Part A - Basic Ray Tracing
+==============================
+
+Implementing Ray Casting with Anit-Aliasing
+------------------------------
+
+The initial ray casting is implemented within the 'Raytracer::render' subroutine. The basic 
+ray tracer called for spawing a single ray for each pixel. In principle we loop through all 
+pixels and spawn the correct ray for each, calling shadeRay recursively to eventually 
+determine the final colour for each pixel. We additionally implemented anti-aliasing with 
+supersampling, so we will spawn more than one ray per pixel; each pixel is split up into a grid,
+the number of points determined ny the _aaLevel variable which can be input by user as a 
+command line argument when the  program is executed. With supersampling  we spawn 
+_aa_level^2 rays per pixel, storing computed RGB values in a 'superbuffer'. Once RGB 
+values in the superbuffer have been computed we average these values over entries 
+corresponing to each pixel to determine the final RGB values of each pixel. 
+
+The ray spawing process is essentially identical in principle to the non-supersampled 
+case, though we determine additional offsets to specify the location of the intersection 
+of the supersampling rays with the image plane. Once we have determined desired image 
+plane intersection coordinates, we construct a vector with these values and use the 
+viewToWorld transformation to determine starting location in world coordinates. The 
+direction vectors  of the ray in view coordinates point from camera origin to the 
+intersection with the image plane. These are also transformed using the viewToWorld matrix. 
+The matrix multiplication operator * is overloaded to accept both objects of type Point3D 
+and Vector3D on the right-hand side and performs the appropriate transformation and 
+returns an obect of the same type. 
+
+Finally we call the Ray3D constructor, passing it values for the ray origin and ray
+direction in world coordinates. From here Raytracer::shadeRay is called which handles 
+the colour-determination process. This involves determining intersections, computing 
+Phong lighting model, spawing additional rays for relflections and refractions, all
+of which are described in further detail later in this report. 
+
+
+Intersections
+----------------------------------
+Object added to the scene must be of shapes described in the SceneObject file.
+
+
+Each of the basic geometic objects for which we wish to determine intersections 
+has an implicit equation of the form F(x,y,z)=0, which x,y,z, are to be considered
+in object coordinates. To determine the intersection of the ray with an affinely 
+deformed geometric objects we must transform to the object's local coordinate system 
+using the 4x4 worldToModel matrix (recall any 3-dimensional affine transformation
+can be expressed as a 4x4 matrix in homogeneous coordinates). We determine the 
+intersection of the ray with the object in the (non-deformed) coordinates local 
+to the shape, then finally transform the intersection point and normals back to 
+world coordinates appropriately (more on this below). 
+
+The surface normal at the point of intersection is transformed to world coordinates 
+not by the modelToWorld matrix, but by it's inverse transpose. Thus we call 
+transNorm(worldToModel, n) to transform the normal to world coordinates,
+rather than modelToWorld which was used to transform the coordinates of the intersection 
+point.
+
+In every case, after determining that the ray object we check for a prior intersections, 
+and if one exists, determining whether whether it is further along the ray's path. 
+
+The unit square is positioned in the xy-plane of it's local coordinate system and 
+lies in the z=0 plane. Checking for intersection requires determining the x-and 
+y-coordinates of the ray's intersection with the plane and simply checking 
+if |x|<0.5 and |y|<0.5. The unit normal points in the z-direction 
+in object coordinates.
+
+Intersections with the unit sphere are slighly more involved. Into the implicit 
+equation F(x,y,z)=(x^2+y^2^z^2)-1=0 we substitute a+t*d, where a is the ray's origin 
+in model coordinates, d it's direction vector (normalized), and t the scalar parameter 
+denoting distance along the ray from it's origin. The implicit equation reduces to a 
+quadratic equation for t; the existence of positive real roots for the aforementioned 
+indicates an intersection along the ray's path and the root is the distance along the 
+ray. We take the smaller positive root as near intersection and use it to compute 
+the near intersection point after checking for prior intersections. The normal to 
+the unit sphere is simply a vector with componets equal to intersection coordinates.
+Transformations for the intersection point and normal are as described above.
+
+Additional shapes
+----------------------
+We also added intersections capabilities for circular cylinders and cones, 
+and thus also any affinely deformed versions of these. In each of these cases 
+the (infinite) walls are quadric surfaces easily representable as implicit 
+equations, F_cone(x,y,z)=x^2+y^2=0, and for cyinder F(x,y,z)=z^2-k*(x^2+y^2)=0,
+where k is a parameter determining the slope of the cone. In each case the 
+intersections with infinite walls are determined first, then caps. Surface 
+normals with the walls are found by computing the gradient of the implicit 
+equation at the point of intersection and then normailzing. See (well-commented) 
+code for details.
+
+=========================================
+Computing Shading
+=========================================
+
+The Phong shading model for a point light source is implemented in the 
+PointLight::shade function whose source code is in light_source.cpp. If a ray has 
+intersected an object, Raytracer::computeShading is called from inside 
+Raytracer::shadeRay. This function traverses the light list and will call a shade 
+function for each light, the particular shade function depends on the type of light
+source. Source code for shade functions is in the light_source.cpp file.
+
+In the case of a pointlight we call PointLight::shade, passing the current ray as 
+the parameter. The ray structure contains as members an intersection structure, 
+which in turn contains location of the intersectionn, the surface normal, 
+and material structure of intersection (which holds material properties we need). 
+This is  everything we need to compute the Phong model at the point of 
+intersection for the current point light. 
+
+The material contains base ambient, diffuse and specular RGB components. The Phong model 
+computes the colour at the intersection at the sum of the abient term with 
+attenuated diffuse and specular components. Attentuation factor for the diffuse component 
+is the dot product of the surface normal with the dirction vector towards the light 
+source, (with lower bound clamped to zero). 
+
+The specular component is attentuated with the dot product of the direction vector 
+towards the light source with the ideal specular reflection direction vector, 
+raised to the power of the specular exponent (a material property).
+
+[Forshortening term ????]
+
+Spherical Light Source
+-----------------------------
+We implemented capacity to compute shading for a spherically shaped "ballLight". 
+
+[Explain ball light here]
+
+
+
+
+====================================
+Reflections and Refractions
+====================================
+
+We implemented capactity for multiple relfections and refractions within the 
+shadeRay function. Upon intersection, we check to determine whether we want 
+ a new ray to reflect or refract. 
+
+New material properties added for implementation
+------------------------------------------------
+Reflections and refractions should depend on the particlar material, so we added
+new material properties type double to denote the reflectivity and transmittivity 
+of a particular material. Reflectivity is different from the shinyness 
+(i.e., specular component computed by Phong model); reflectivity refers to the extent 
+to which we are able to see other objects relflecting within the surface. Transmittitvity 
+(again double between 0 and 1) refers to the extent to which light passes thrugh a given 
+material. Since refractions also depend on the speed of light in a medium, we added 
+a variable 'cLight' to materials; it is a type-double, between 0 and 1, referring 
+to the ratio of the speed of light in the given material 
+to that in a vacuum. 
+
+New ray variables added
+-------------------------------
+We added integer variables denoting the numbers of reflections and refractions, 
+necessary because we only want a finite number of each. We also added a cLight 
+variable, analagous to that in matrial, so that when computing refractions we 
+know the relative speed of light of the ray in the medium which the ray is leaving, 
+which is necessary to compute the refraction angle. The default value is set to 
+1.0 for rays spawned on the image plane. For reflected and refracted rays, cLight 
+must be set depending on whether the ray is "inside" or "outside" of a medium; 
+this requires checking dot products of surface normals with ray directions.
+
+Implementing Reflections
+----------------------------------
+We set the constant MAX_REFLECTIONS to three in the util.h file. When calling 
+Raytracer::shadeRay, we spawn a new ray in the ideal specular reflection direction, 
+provided that the incoming ray's reflections variable is less than the maximum. 
+Ideal specular reflection direction is computed from incoming ray's direction 
+and unit surface normal. We spawn the new ray with a slight offset 0.001*d_spec, 
+just so that the reflected ray does not accidentally intersect the same surface. 
+Additionally the reflected ray has its reflections variable initialized to one 
+greater than the incoming ray. The reflected ray is passed as a parameter to 
+Raytracer::shadeRay, which is called recursively.  Raytracer::shadeRay returns a 
+type-Colour object (essentially a 3-component array containing RGB values). 
+
+Once we have the colour returned from the reflected ray we need to determine 
+how to combine this with the Phong illumination model at the current intersection 
+point to produce something that looks realistic. We intilalize ray.col to the 
+Phong-computed value. We decided on the linear combination
+ 
+ray.col = (1-ref)*ray.col + ref*secondaryColour,
+
+where 'ref' refers to reflectivity of the material at the intersection,
+      'secondaryColour' is the colour returned by shadeRay(reflectedRay)
+      'ray.col' is the colour of the current (incoming ray).
+We attentuated the initial colour so we would not hit the limit.  
+
+Regarding cLight initializations for reflected rays, just initialize it to the 
+cLight value of the incoming ray.
+
+Implementing refractions
+-------------------------------------
+For refractions we use a simiar approach: spawn a new ray, call Raytracer::shadeRay, 
+and combine the returned colour with that of the current ray. In order to determine
+the refraction direction we need the speed of the incoming ray (c1) the speed of 
+the outgoing ray (c2); the former is given by the incoming ray, but the latter 
+depends on whether the ray is entering or leaving the medium. To determine which case, 
+we compute the dot product of the incoming direction with the surface normal at the 
+intersection. Positive indicates that the refracted ray leaves the medium and enters the 
+surrounding vacuum, so set c2=1; negative means we are enerting a medium, 
+so c2=intersection.mat.cLight. 
+
+The direction vector for the refracted ray is determined using the formula in class 
+lecure notes. A small modification is required (just a particular change of sign) 
+for rays exiting into a vacuum since our normals always point outward.
+
+The returned colour is combined with the current colour, which is slightly 
+attenuated based on the transmission coefficient. A larger transmission coefficient 
+gives more weight to the colour returned by the refracted ray and less to the 
+computed Phong-illumination at the intersection point on the surface.
+
+
+
+
+[What else????]
+
+
+
+
+
+

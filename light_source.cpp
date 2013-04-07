@@ -58,18 +58,20 @@ void PointLight::shade( Ray3D& ray ) {
 	// Now integrate over each flux component
 	static const int num_elems = 128;
 	
+
+	
 	Vector3D n = i.normal;
 	n.normalize();
 	Vector3D d = ray.dir;
 	d.normalize();
-	Vector3D c = _pos - i.point;	// camera relative coord
+	Vector3D c = _pos - i.point;	// direction to light source
 	c.normalize();
-	Vector3D t = d - (2*d.dot(n))*n;	// theoretical specular direction
+	Vector3D t = d - (2*d.dot(n))*n;	// ideal specular direction
 	
 	// calculate each phong term
 	float diffuse = n.dot(c);
 	float specular = t.dot(c);
-	
+
 	// clamp the lower bounds
 	if (diffuse < 0) { diffuse = 0; }
 	if (specular < 0) { specular = 0; }
@@ -81,7 +83,10 @@ void PointLight::shade( Ray3D& ray ) {
 	
 	Colour basic_colour = base_ambient + diffuse*base_diffuse +
 			pow(specular, m->specular_exp)*base_specular;
+
+	
 	double foreshortening_term;
+	
 	for (int dflux = 0; dflux < num_elems; dflux++) {
 		foreshortening_term = get_normal(dflux).dot(d);
 		if (foreshortening_term > 1) {
@@ -93,6 +98,8 @@ void PointLight::shade( Ray3D& ray ) {
 					basic_colour);
 		}
 	}
+	
+	//ray.col = ray.col + basic_colour;
 	ray.col.clamp();
 }
 

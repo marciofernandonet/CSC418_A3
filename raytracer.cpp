@@ -229,86 +229,97 @@ void Raytracer::flushPixelBuffer( char *file_name ) {
 	delete _bbuffer;
 }
 
-Colour Raytracer::shadeRay( Ray3D& ray ) {
+Colour Raytracer::shadeRay( Ray3D& ray, char renderStyle ) {
 	Colour col(0.0, 0.0, 0.0); 
 	traverseScene(_root, ray); 
 	
 	// Don't bother shading if the ray didn't hit 
 	// anything.
 	if (!ray.intersection.none) {
-		computeShading(ray);
-		
-		if ((ray.reflections < MAX_REFLECTIONS) /*&& (ray.refractions <3)*/) {
-			// emit another ray
-			Vector3D n = ray.intersection.normal;
-			n.normalize();
-			Vector3D d = ray.dir;
-			d.normalize();
-			
-			double dot = n.dot(d);
-			Vector3D newdir = d - (2 * dot * n);
-			
-			Ray3D newRay = Ray3D(ray.intersection.point + 0.01*newdir,
-					newdir, ray.reflections+1);
-			Colour secondaryColour = shadeRay(newRay);
-			
-			double ref = ray.intersection.mat->reflectivity;
-			col = (1-ref)*ray.col + ref*secondaryColour;
-		} else {
+		//computeShading(ray);
+		if (renderStyle != 's'){
+			computeShading(ray);
 			col = ray.col;
+			   
+		
+		
+			if ((ray.intersection.mat->reflectivity >= 0.01) && (ray.reflections < MAX_REFLECTIONS) /*&& (ray.refractions <3)*/) {
+				// emit another ray
+				Vector3D n = ray.intersection.normal;
+				n.normalize();
+				Vector3D d = ray.dir;
+				d.normalize();
+			
+				double dot = n.dot(d);
+				Vector3D newdir = d - (2 * dot * n);
+			
+				Ray3D newRay = Ray3D(ray.intersection.point + 0.01*newdir,
+						newdir, ray.reflections+1, ray.refractions, ray.cLight);
+				Colour secondaryColour = shadeRay(newRay, renderStyle);
+			
+				double ref = ray.intersection.mat->reflectivity;
+				col = (1-ref)*ray.col + ref*secondaryColour;
+			} /*else {
+				col = ray.col;
+			}*/
+			// Check for refractions		
+			// Don't check for refractions of reflected rays
+		
+			if((ray.intersection.mat->transitivity >= 0.1) && (ray.refractions < MAX_REFRACTIONS)){ 
+				double c1 = ray.cLight;
+				double c2 = ray.intersection.mat->cLight;
+				if (ray.cLight < 0.99){//Ray leaves object to air/vacuum
+					c2= 1;
+				}
+			
+		
+				Vector3D n = ray.intersection.normal;
+				n.normalize();
+				Vector3D d = ray.dir;
+				d.normalize();
+
+				double dot = n.dot(d);
+				Vector3D reflDir = d - (2 * dot * n);
+				reflDir.normalize();
+
+				//Now determine refraction direction
+				//Depends on reflDir, c1, c2, n, as specified in the relation below
+				double theta1 = acos( n.dot(-d) );
+				if(dot > 0 ){ //Ray is leaving object
+					theta1 = acos( n.dot(d) ); 
+				}
+				double theta2 = asin(c2*sin(theta1)/c1);
+
+				//Check for critical angle
+			
+				// Compute refraction direction 
+				Vector3D refractDir = (c2/c1)*ray.dir + ( (c2/c1)*cos(theta1) - cos(theta2))*n;
+				if(dot > 0 ){ //Ray is leaving object     =====================changed sign
+					refractDir = (c2/c1)*ray.dir - ( (c2/c1)*cos(theta1) - cos(theta2))*n;
+				}
+			
+				refractDir.normalize();
+			
+				Ray3D refractRay = Ray3D(ray.intersection.point + 0.0001*refractDir, refractDir,ray.reflections, ray.refractions+1, c2 );
+
+				Colour colRefract = shadeRay(refractRay, renderStyle);
+				double matTran = ray.intersection.mat->transitivity;
+				if(!refractRay.intersection.none){ //Refracted ray does not go off into space
+					col = (1-matTran)*col + matTran*colRefract;
+				}
+			}//end of refractions
+		
+		}//End of check if(renderStyle != 's')
+		else{ //renderStyle == 's'
+			col = (*(ray.intersection.mat)).diffuse;
 		}
-		// Check for refractions		
-		// Don't check for refractions of reflected rays
-		
-		if((ray.intersection.mat->transitivity >= 0.1) && (ray.refractions < MAX_REFRACTIONS) ){ //i.e., don't refract reflected rays
-			double c1 = ray.cLight;
-			double c2 = ray.intersection.mat->cLight;
-			if (ray.cLight < 0.999){//Ray leaves object to air/vacuum
-				c2= 1;}
-			
-		
-			Vector3D n = ray.intersection.normal;
-			n.normalize();
-			Vector3D d = ray.dir;
-			d.normalize();
-
-			double dot = n.dot(d);
-			Vector3D reflDir = d - (2 * dot * n);
-			reflDir.normalize();
-
-			//Now determine refraction direction
-			//Depends on reflDir, c1, c2, n, as specified in the relation below
-			double theta1 = acos( n.dot(-d) );
-			if(dot > 0 ){ //Ray is leaving object
-				theta1 = acos( n.dot(d) ); 
-			}
-			double theta2 = asin(c2*sin(theta1)/c1);
-
-			//Check for critical angle
-			
-			// Compute refraction direction 
-			Vector3D refractDir = (c2/c1)*ray.dir + ( (c2/c1)*cos(theta1) - cos(theta2))*n;
-			if(dot > 0 ){ //Ray is leaving object
-				refractDir = (c2/c1)*ray.dir - ( (c2/c1)*cos(theta1) - cos(theta2))*n;}
-			
-			refractDir.normalize();
-			
-			Ray3D refractRay = Ray3D(ray.intersection.point + 0.001*refractDir, refractDir,ray.reflections, ray.refractions+1, c2 );
-
-			Colour colRefract = shadeRay(refractRay);
-			double matTran = ray.intersection.mat->transitivity;
-			if(!refractRay.intersection.none){ //Refracted ray does not go off into space
-				col = (1-matTran)*col + matTran*colRefract;
-			}
-		}
-		
-	}
+	}//End of check if (!ray.intersection.none) 
 	
 	return col; 
 }	
 
 void Raytracer::render( int width, int height, Point3D eye, Vector3D view, 
-		Vector3D up, double fov, int AA_level, char* fileName ) {
+		Vector3D up, double fov, int AA_level, char* fileName, char renderStyle ) {
 	Matrix4x4 viewToWorld;
 	_scrWidth = width;
 	_scrHeight = height;
@@ -358,8 +369,11 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			Point3D transformedOrigin = viewToWorld * origin;
 			
 			Ray3D ray = Ray3D(transformedOrigin, transformedPixelVector);
+			
+			//Check for scene render style
+			
 
-			Colour col = shadeRay(ray); 
+			Colour col = shadeRay(ray, renderStyle); 
 			
 			superi = i*_aaLevel + m;
 			superj = j*_aaLevel + n;
@@ -413,6 +427,9 @@ int main(int argc, char* argv[])
 	int width = 320; 
 	int height = 240; 
 	int aa = 2;
+	int sceneNum = 0;
+
+	double toRadian = 2*M_PI/360.0;
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -421,78 +438,336 @@ int main(int argc, char* argv[])
 		width = atoi(argv[1]);
 		height = atoi(argv[2]);
 		aa = atoi(argv[3]);
+	} else if (argc == 5) {
+		width = atoi(argv[1]);
+		height = atoi(argv[2]);
+		aa = atoi(argv[3]);
+		sceneNum = atoi(argv[4]);
 	}
-
+	if (sceneNum > 3){
+		sceneNum = 0;
+	}
 	// Camera parameters.
 	Point3D eye(0, 0, 1);
 	Vector3D view(0, 0, -1);
 	Vector3D up(0, 1, 0);
 	double fov = 60;
-
-	// Defines a material for shading.
+	
+	
+	// Defines materials for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2, 0.01, 0.0, 1/2.4 );
+			51.2, 0.001, 0.0, 1/2.4 );
 	Material jade( Colour(0.22, 0.38, 0.33), Colour(0.52, 0.73, 0.57), 
 			Colour(0.316228, 0.316228, 0.316228), 
 			12.8, 0.2 , 0.0, 0.0 );
 	Material polishedGold( Colour(0.24725, 0.2245, 0.0645), Colour(0.34615, 0.3143, 0.0903),
 			Colour(0.797357, 0.723991, 0.208006), 83.2, 0.01,0.0,0.0);
 
-	Material glass( Colour(0.15, 0.15, 0.15), Colour(0.08, 0.08, 0.08), Colour(0.2, 0.2, 0.2), 10.1,0.05,0.9,1/1.5 );
+	Material glass( Colour(0.15, 0.15, 0.15), Colour(0.08, 0.08, 0.08), 
+			Colour(0.2, 0.2, 0.2), 10.1,0.08,0.9,0.6667 );
+	
+	Material glass1( Colour(0.2, 0.2, 0.2), Colour(0.2, 0.2, 0.2), 
+			Colour(0.7, 0.7, 0.7), 25.1,0.0,0.9,0.6667 );
+	
+	
+	Material steel( Colour(0.1, 0.1, 0.1), Colour(0.1, 0.1, 0.1), 
+			Colour(0.8, 0.8, 0.8), 80, 0.03, 0.0, 1.0 );
+
+	Material blueSolid( Colour(0, 0, 1), Colour(0, 0, 1), 
+			Colour(0, 0, 0), 0, 0.0, 0.0, 1.0 );
+
+	Material redSolid( Colour(1, 0, 0), Colour(1, 0, 0), 
+			Colour(0, 0, 0), 0, 0.0, 0.0, 1.0 );
+
+	Material chrome( Colour(0.25, 0.25, 0.25), Colour(0.4,0.4,0.4), 
+			Colour(0.7746, 0.7746, 0.7746), 77, 0.42, 0.0, 1.0);
+	
+	Material ruby( Colour(0.1745, 0.01175, 0.01175), Colour(0.61424, 0.04136, 0.04136),
+			Colour(0.727811, 0.626959, 0.626959) , 76.8, 0.01, 0.45, 0.565);
+
+	Material pearl( Colour(0.25, 0.20725, 0.20725), Colour(1, 0.829, 0.829), 
+			Colour(0.296648, 0.296648, 0.296648), 11.264, 0.1,0.0,1.0 );
+
+	Material silver(Colour(0.23125, 0.23125, 0.23125), Colour(0.2775, 0.2775, 0.2775),
+			Colour(0.773911, 0.773911, 0.773911), 89.6, 0.4,0.0, 1.0);
+
+	Material emerald(Colour(0.0215, 0.1745, 0.0215),Colour(0.07568, 0.61424, 0.07568),
+			Colour(0.633, 0.727811, 0.633), 76.8, 0.1, 0.25, 0.637);
+	
+	Material brass(Colour(0.329412, 0.223529,  0.027451),Colour(0.780392, 0.568627, 0.113725),
+			Colour(0.992157, 0.941176, 0.807843),27.8974, 0.3, 0.0, 1.0 );
+
+	Material bronze(Colour(0.2125, 0.1275, 0.054), Colour(0.714, 0.4284, 0.18144), 
+		Colour(0.393548, 0.271906, 0.166721), 25.6, 0.1, 0.0, 1.0 );
+	
+	Material bronzeShiny(Colour(0.25, 0.148, 0.06475), Colour(0.4, 0.2368, 0.1036), 
+		Colour(0.774597, 0.458561, 0.200621), 76.86, 0.15, 0.0, 1.0 );
+	
+	Material turquoise(Colour(0.1, 0.18725, 0.1745), Colour(0.396, 0.74151, 0.69102),
+			Colour(0.297254, 0.30829, 0.306678), 12.8, 0.01, 0.2, 0.9);
+
+	Material obsidian(Colour(0.05375, 0.05, 0.06625), Colour(0.18275, 0.17, 0.22525),
+			Colour(0.332741, 0.328634, 0.346435), 38.4, 0.05, 0.18, 0.413);
+
+	Material copper(Colour(0.19125, 0.0735, 0.0225), Colour(0.7038, 0.27048, 0.0828), 
+			Colour(0.256777, 0.137622, 0.086014), 12.8, 0.1, 0.0, 1.0 );
+	
+	Material copperPolished(Colour(0.2295, 0.08825, 0.0275), Colour(0.5508, 0.2118, 0.066), 
+			Colour(0.580594, 0.223257, 0.0695701), 51.2, 0.1, 0.0, 1.0 );
+	
+	Material pewter(Colour(0.105882, 0.058824, 0.113725), Colour(0.427451, 0.470588, 0.541176), 
+			Colour(0.333333, 0.333333, 0.521569), 9.84615, 0.0, 0.0, 1.0 );
 
 	// Defines a point light source.
 	//~ raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
 				//~ Colour(0.9, 0.9, 0.9) ) );
+
+	
 	// Defines a ball light source
-	raytracer.addLightSource( new BallLight(Point3D(-5, 1, 10),
-			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
-	raytracer.addLightSource( new BallLight(Point3D(5, -1, 10),
-			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
-	raytracer.addLightSource( new BallLight(Point3D(0, 0, 16),
-			10.0, Colour(0.9, 0.9, 0.9), 0.666) );
-	raytracer.addLightSource( new BallLight(Point3D(0, 0, -10),
-			5.0, Colour(0.9, 0.9, 0.9), 1.666) );
+	
+	//raytracer.addLightSource( new BallLight(Point3D(5, -1, 10),
+	//		10.0, Colour(0.9, 0.9, 0.9), 0.666) );
+	//raytracer.addLightSource( new BallLight(Point3D(0, 0, 16),
+	//		10.0, Colour(0.9, 0.9, 0.9), 0.666) );
+	//raytracer.addLightSource( new BallLight(Point3D(0, 0, -10),
+			//1.0, Colour(0.9, 0.9, 0.9), 1.666) );
+	
+	//raytracer.addLightSource( new PointLight(Point3D(1, 1, 2),Colour(0.5, 0.5, 0.5)) );
 
-	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass);
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade);
-	SceneDagNode* cylinder = raytracer.addObject( new UnitCylinder(), &gold);
-	
-	// Apply some transformations to the unit square.
-	double factor1[3] = { 1.0, 2.0, 1.0 };
-	double factor2[3] = { 6.0, 6.0, 6.0 };
-	double factor3[3] = { 1.0, 1.0, 2.0 };
-	raytracer.translate(sphere, Vector3D(0, 0, -5));	
-	raytracer.rotate(sphere, 'x', -45); 
-	raytracer.rotate(sphere, 'z', 45); 
-	raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+	if (sceneNum==0){
 
-	raytracer.translate(plane, Vector3D(0, 0, -7));	
-	raytracer.rotate(plane, 'z', 45); 
-	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
-	
-	
-	raytracer.translate(cylinder, Vector3D(4, 0, -5));
-	raytracer.rotate(cylinder, 'x', -75); 
-	raytracer.scale(cylinder, Point3D(0, 0, 0), factor3);
+		// Defines a point light source.
+		raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
+					Colour(0.9, 0.9, 0.9) ) );
 
+		// Add a unit square into the scene with material mat.
+		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &turquoise);
+		SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &brass );
 	
+		// Apply some transformations to the unit square.
+		double factor1[3] = { 1.0, 2.0, 1.0 };
+		double factor2[3] = { 6.0, 6.0, 1.0 };
+		double factor3[3] = { 4.0, 4.0, 4.0 };
+		double factor4[3] = { 3.7, 3.7, 3.7 };
+		raytracer.translate(sphere, Vector3D(0, 0, -5));	
+		raytracer.rotate(sphere, 'x', -45); 
+		raytracer.rotate(sphere, 'z', 45); 
+		raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+
+		raytracer.translate(plane, Vector3D(0, 0, -7));	
+		raytracer.rotate(plane, 'z', 45); 
+		raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+		/*
+		SceneDagNode* bigSphere = raytracer.addObject( new UnitSphere(), &glass1);
+		raytracer.scale(bigSphere, Point3D(0, 0, 0), factor3);
+		raytracer.translate(bigSphere, Vector3D(0, 0, -7));
+
+		SceneDagNode* bigSphere2 = raytracer.addObject( new UnitSphere(), &glass1);
+		raytracer.scale(bigSphere2, Point3D(0, 0, 0), factor4);
+		raytracer.translate(bigSphere2, Vector3D(0, 0, -7));
+		*/
+
+	}// end of scene 0
+
+	if (sceneNum==1){
+
+		raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
+			5.0, Colour(0.9, 0.9, 0.9), 0.888) );
+		raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
+
+		// Add a unit square into the scene with material mat.
+		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass);
+		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &gold);
+		SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade);
+		SceneDagNode* cylinder = raytracer.addObject( new UnitCone(), &gold);
+	
+		// Apply some transformations to the unit square.
+		double factor1[3] = { 1.0, 2.0, 1.0 };
+		double factor2[3] = { 6.0, 6.0, 1.0 };
+		double factor3[3] = { 2.0, 2.0, 3.0 };
+		raytracer.translate(sphere, Vector3D(0, 0, -5));	
+		raytracer.rotate(sphere, 'x', -45); 
+		raytracer.rotate(sphere, 'z', 45); 
+		raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+
+		raytracer.translate(sphere1, Vector3D(-2, 0, -5));	
+	
+		raytracer.translate(plane, Vector3D(0, 0, -7));	
+		raytracer.rotate(plane, 'z', 45); 
+		raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+	
+	
+		raytracer.translate(cylinder, Vector3D(3, 0, -5));
+		//raytracer.rotate(cylinder, 'y', -20); 
+		raytracer.rotate(cylinder, 'x', -90); 
+		raytracer.scale(cylinder, Point3D(0, 0, 0), factor3);
+
+	}// end of scene1
+
+
+	//=============== Scene 2 ==============================
+	//=====================================================
+
+	if(sceneNum == 2){
+
+		raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
+			5.0, Colour(0.9, 0.9, 0.9), 0.888) );
+		raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
+		//Set up walls
+		//========================================================
+
+		SceneDagNode* planeBack = raytracer.addObject( new UnitSquare(), &brass);
+		SceneDagNode* planeBottom = raytracer.addObject( new UnitSquare(), &chrome);
+		SceneDagNode* planeTop = raytracer.addObject( new UnitSquare(), &gold);
+		SceneDagNode* planeLeft = raytracer.addObject( new UnitSquare(), &bronzeShiny);
+		SceneDagNode* planeRight = raytracer.addObject( new UnitSquare(), &brass);
+		SceneDagNode* planeRear = raytracer.addObject( new UnitSquare(), &brass);
+
+		double scaleFactor[3] = {8.0,8.0,1.0};
+		double scaleFactor1[3] = {20.01,20.01,1.0};
+
+		raytracer.translate(planeBottom, Vector3D(0, -10, 0));
+		raytracer.translate(planeTop, Vector3D(0, 10, 0));
+		raytracer.translate(planeLeft, Vector3D(-10, 0, 0));
+
+		raytracer.translate(planeRight, Vector3D(10, 0, 0));
+	
+		raytracer.translate(planeBack, Vector3D(0, 0, -19.9));
+		raytracer.translate(planeBottom, Vector3D(0, 0, -10));
+		raytracer.translate(planeTop, Vector3D(0, 0, -10));
+		raytracer.translate(planeLeft, Vector3D(0, 0, -10));
+		raytracer.translate(planeRight, Vector3D(0, 0, -10));
+		raytracer.translate(planeRear, Vector3D(0, 0, 20));
+	
+		raytracer.rotate(planeTop, 'x', 90); 
+		raytracer.rotate(planeBottom, 'x',-90); 
+		raytracer.rotate(planeLeft, 'y', -90); 
+		raytracer.rotate(planeRight, 'y', 90); 
+		raytracer.rotate(planeRear, 'x', 180);
+
+		raytracer.scale(planeBack, Point3D(0, 0, 0), scaleFactor1);
+		raytracer.scale(planeBottom, Point3D(0, 0, 0), scaleFactor1);
+		raytracer.scale(planeTop, Point3D(0, 0, 0), scaleFactor1);
+		raytracer.scale(planeLeft, Point3D(0, 0, 0), scaleFactor1);
+		raytracer.scale(planeRight, Point3D(0, 0, 0), scaleFactor1);
+		raytracer.scale(planeRear, Point3D(0, 0, 0), scaleFactor1);
+		//===========================================================
+	
+		double scaleBall[3] = {2,2,2};
+		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass1);
+		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &ruby);
+		SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &chrome);
+		//SceneDagNode* cone = raytracer.addObject(sphere, new UnitCone(), &brass);
+
+		//raytracer.translate(cone, Vector3D(0,0,-2));
+		raytracer.translate(sphere, Vector3D(-1,-1,-11));
+		raytracer.scale(sphere, Point3D(0,0,0), scaleBall);
+	
+		raytracer.translate(sphere1, Vector3D(2,-1,-11));
+		raytracer.translate(sphere2, Vector3D(2,3,-11));
+		//raytracer.translate(cone, Vector3D(-1,-1,-12));
+		//raytracer.rotate(cone, 'x', -90);
+
+	}//end of scene 2
+	
+
+	//==================== Scene 3 =================
+	//===============================================
+	if(sceneNum == 3){
+
+		raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
+			5.0, Colour(0.9, 0.9, 0.9), 0.888) );
+		raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
+		//raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
+
+		double factor1[3] = { 1.0, 1.0, 3.0 };
+		double factor2[3] = { 6.0, 6.0, 1.0 };
+		double factor3[3] = { 2.0, 2.0, 3.0 };
+
+		SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &chrome);
+		SceneDagNode* plane2 = raytracer.addObject( new UnitSquare(), &brass);
+		SceneDagNode* plane3 = raytracer.addObject( new UnitSquare(), &brass);
+		SceneDagNode* cone  = raytracer.addObject( new UnitCone(), &ruby);
+		SceneDagNode* cylinder = raytracer.addObject( new UnitCylinder(), &turquoise );
+
+
+		
+		raytracer.translate(cylinder, Vector3D(0,-3,-7));
+		raytracer.rotate(cylinder, 'x', -90);
+		raytracer.scale(cylinder, Point3D(0,0,0), factor1);
+		
+		raytracer.translate(cone, Vector3D(0,3,-7));
+		raytracer.rotate(cone, 'x', 90);
+		raytracer.scale(cone, Point3D(0,0,0), factor1);
+		
+
+		raytracer.translate(plane1, Vector3D(0,0,-10));
+		raytracer.translate(plane2, Vector3D(4,0,-7));
+		raytracer.translate(plane3, Vector3D(-4,0,-7));
+
+		raytracer.rotate(plane2, 'y', -75);
+		raytracer.rotate(plane3, 'y', 75);
+
+		raytracer.scale(plane1, Point3D(0,0,0), factor2);
+		raytracer.scale(plane2, Point3D(0,0,0), factor2);
+		raytracer.scale(plane3, Point3D(0,0,0), factor2);
+		
+		//==== face ====
+		SceneDagNode* eyeLfront = raytracer.addObject( new UnitSquare(), &pearl);
+		SceneDagNode* eyeRfront = raytracer.addObject( new UnitSquare(), &emerald);
+		
+		SceneDagNode* eyeLback = raytracer.addObject( new UnitSquare(), &emerald);
+		SceneDagNode* eyeRback = raytracer.addObject( new UnitSquare(), &emerald);
+		
+		double eyeScale[3] = {0.4, 0.4, 1};
+
+
+		raytracer.translate(eyeLfront, Vector3D(0.5,-0.5,-5));
+		raytracer.translate(eyeRfront, Vector3D(-0.5,-0.5,-5));
+		raytracer.translate(eyeLback, Vector3D(-0.5,-0.5,-9));
+		raytracer.translate(eyeRback, Vector3D(0.5,-0.5,-9));
+
+		raytracer.rotate(eyeLfront, 'z', 45);
+		raytracer.rotate(eyeRfront, 'z', 45);
+		raytracer.rotate(eyeLback, 'z', 45);
+		raytracer.rotate(eyeRback, 'z', 45);
+		
+		raytracer.scale(eyeLfront, Point3D(0,0,0), eyeScale);
+		raytracer.scale(eyeRfront, Point3D(0,0,0), eyeScale);
+		raytracer.scale(eyeLback, Point3D(0,0,0), eyeScale);
+		raytracer.scale(eyeRback, Point3D(0,0,0), eyeScale);
+	
+	}//end of scene 3
 
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
-	raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp");
+	//raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp");
+	//raytracer.render(width, height, eye, view, up, fov, aa,  "sig1.bmp", 's');
+	raytracer.render(width, height, eye, view, up, fov, aa, "phong1.bmp",'p');
+	//raytracer.render(width, height, eye, view, up, fov, aa, "diffuse1.bmp",'d');
+	
+	
+
 	
 	// Render it from a different point of view.
 	Point3D eye2(4, 2, 1);
 	Vector3D view2(-4, -2, -6);
-	raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp");
+	//raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp");
+	//raytracer.render(width, height, eye2, view2, up, fov, aa, "sig2.bmp", 's');
+	raytracer.render(width, height, eye2, view2, up, fov, aa, "phong2.bmp",'p');
+	//raytracer.render(width, height, eye2, view2, up, fov, aa, "diffuse2.bmp",'d');
 	
 	
 	Point3D eye3(-4, -2, 1);
 	Vector3D view3(4, 2, -6);
-	raytracer.render(width, height, eye3, view3, up, fov, aa, "view3.bmp");
+	//raytracer.render(width, height, eye3, view3, up, fov, aa, "view3.bmp");
+	//raytracer.render(width, height, eye3, view3, up, fov, aa, "sig3.bmp", 's');
+	raytracer.render(width, height, eye3, view3, up, fov, aa, "phong3.bmp",'p');
+	//raytracer.render(width, height, eye3, view3, up, fov, aa, "diffuse3.bmp",'d');
+	
+	
 	
 	return 0;
 }
