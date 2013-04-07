@@ -526,7 +526,8 @@ int main(int argc, char* argv[])
 	 
 	#ifdef IGNORE_SHADOWS
 		fprintf(stderr, "\tNo shadows\n");
-	#else{
+	#else
+	{
 		#ifdef USE_TRANSMISSIONSHADOWS
 		fprintf(stderr, "\tTransmission-based shadows\n");
 		#else
@@ -556,7 +557,7 @@ int main(int argc, char* argv[])
 		sceneNum = atoi(argv[4]);
 	}
 	// SceneNum should not exceed total scenes
-	if ((sceneNum > 3)|| (sceneNum <0)){
+	if ((sceneNum > 4)|| (sceneNum <0)){
 		sceneNum = 0;
 	}
 	// Camera parameters.
@@ -643,7 +644,7 @@ int main(int argc, char* argv[])
 	#else
 	// Defines a point light source.
 	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
-				Colour(0.9, 0.9, 0.9) ) );
+				Colour(0.5, 0.5, 0.5) ) );
 	#endif
 
 
@@ -773,16 +774,16 @@ int main(int argc, char* argv[])
 		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass1);
 		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &ruby);
 		SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &chrome);
-		//SceneDagNode* cone = raytracer.addObject(sphere, new UnitCone(), &brass);
+		SceneDagNode* cone = raytracer.addObject(sphere, new UnitCone(), &emerald);
 
-		//raytracer.translate(cone, Vector3D(0,0,-2));
+		raytracer.translate(cone, Vector3D(0,0,-2));
 		raytracer.translate(sphere, Vector3D(-1,-1,-11));
 		raytracer.scale(sphere, Point3D(0,0,0), scaleBall);
 	
 		raytracer.translate(sphere1, Vector3D(2,-1,-11));
 		raytracer.translate(sphere2, Vector3D(2,3,-11));
-		//raytracer.translate(cone, Vector3D(-1,-1,-12));
-		//raytracer.rotate(cone, 'x', -90);
+		raytracer.translate(cone, Vector3D(-1,-1,-12));
+		raytracer.rotate(cone, 'x', 90);
 
 	}//end of scene 2
 	
@@ -855,14 +856,45 @@ int main(int argc, char* argv[])
 		raytracer.scale(eyeRback, Point3D(0,0,0), eyeScale);
 	
 	}//end of scene 3
+	
+	if(sceneNum == 4){
 
+		#ifdef USE_EXTENDEDLIGHTS
+			raytracer.addLightSource( new BallLight(Point3D(5, 5, 0),
+				2.0, Colour(0.4, 0.4, 0.4), 3) );
+		#else
+			raytracer.addLightSource( new PointLight(Point3D(-5, 5, 0), 
+				Colour(0.5, 0.0, 0.0) ) );
+			raytracer.addLightSource( new PointLight(Point3D(5, 5, 0), 
+				Colour(0.0, 0.5, 0.0) ) );
+			raytracer.addLightSource( new PointLight(Point3D(0, -5, 0), 
+				Colour(0.0, 0.0, 0.5) ) );
+		#endif
+
+		double planeScale[3] = {10.0, 10.0, 1.0};		
+		double sphereScale[3]= {1.5,1.5,1.5};
+		
+		SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &pearl);
+		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &chrome);
+		SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &brass);
+
+		raytracer.translate(sphere1, Vector3D(1, 1.5, -6.5));	
+		raytracer.translate(sphere2, Vector3D(-1, -1.5, -6.5));
+		raytracer.scale(sphere2, Point3D(0,0,0), sphereScale);	
+		raytracer.scale(sphere1, Point3D(0,0,0), sphereScale);
+
+		
+		raytracer.rotate(plane, 'z', 45); 
+		raytracer.scale(plane, Point3D(0,0,0), planeScale);
+		raytracer.translate(plane, Vector3D(0, 0, -8));	
+	}
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
 
-	raytracer.render(width, height, eye, view, up, fov, aa,  "sig1.bmp", 's');
-	raytracer.render(width, height, eye, view, up, fov, aa, "diffuse1.bmp",'d');
-	raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp",'p');
+	//raytracer.render(width, height, eye, view, up, fov, aa,  "sig1.bmp", 's');
+	//raytracer.render(width, height, eye, view, up, fov, aa, "diffuse1.bmp",'d');
+	//raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp",'p');
 	
 	
 	
@@ -873,7 +905,7 @@ int main(int argc, char* argv[])
 	Vector3D view2(-4, -2, -6);
 	
 	raytracer.render(width, height, eye2, view2, up, fov, aa, "sig2.bmp", 's');
-	raytracer.render(width, height, eye2, view2, up, fov, aa, "diffuse2.bmp",'d');
+	//raytracer.render(width, height, eye2, view2, up, fov, aa, "diffuse2.bmp",'d');
 	raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp",'p');
 	
 	
@@ -882,7 +914,7 @@ int main(int argc, char* argv[])
 	Vector3D view3(4, 2, -6);
 
 	raytracer.render(width, height, eye3, view3, up, fov, aa, "sig3.bmp", 's');
-	raytracer.render(width, height, eye3, view3, up, fov, aa, "diffuse3.bmp",'d');
+	//raytracer.render(width, height, eye3, view3, up, fov, aa, "diffuse3.bmp",'d');
 	raytracer.render(width, height, eye3, view3, up, fov, aa, "view3.bmp",'p');
 	
 	

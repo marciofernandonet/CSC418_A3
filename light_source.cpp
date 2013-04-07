@@ -71,9 +71,9 @@ void PointLight::shade( Ray3D& ray, Raytracer *raytracer, char renderStyle ) {
 
 	
 	if(renderStyle == 'd'){
-		ray.col = base_ambient + transmission * diffuse*base_diffuse;
+		ray.col = ray.col + base_ambient + transmission * diffuse*base_diffuse;
 	}else{
-		ray.col = base_ambient + transmission * diffuse*base_diffuse +
+		ray.col = ray.col + base_ambient + transmission * diffuse*base_diffuse +
 			transmission * pow(specular, m->specular_exp)*base_specular;
 	}
 	
