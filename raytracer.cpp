@@ -557,7 +557,7 @@ int main(int argc, char* argv[])
 		sceneNum = atoi(argv[4]);
 	}
 	// SceneNum should not exceed total scenes
-	if ((sceneNum > 4)|| (sceneNum <0)){
+	if ((sceneNum > 3)|| (sceneNum <0)){
 		sceneNum = 0;
 	}
 	// Camera parameters.
@@ -578,10 +578,10 @@ int main(int argc, char* argv[])
 			Colour(0.797357, 0.723991, 0.208006), 83.2, 0.01,0.0,0.0);
 
 	Material glass( Colour(0.15, 0.15, 0.15), Colour(0.08, 0.08, 0.08), 
-			Colour(0.2, 0.2, 0.2), 10.1,0.08,0.9,0.6667 );
+			Colour(0.2, 0.2, 0.2), 50.1,0.08,0.9,0.6667 );
 	
 	Material glass1( Colour(0.2, 0.2, 0.2), Colour(0.2, 0.2, 0.2), 
-			Colour(0.7, 0.7, 0.7), 25.1,0.0,0.9,0.6667 );
+			Colour(0.7, 0.7, 0.7), 10.1,0.03,0.9,0.6667 );
 	
 	
 	Material steel( Colour(0.1, 0.1, 0.1), Colour(0.1, 0.1, 0.1), 
@@ -597,7 +597,7 @@ int main(int argc, char* argv[])
 			Colour(0.7746, 0.7746, 0.7746), 77, 0.42, 0.0, 1.0);
 	
 	Material ruby( Colour(0.1745, 0.01175, 0.01175), Colour(0.61424, 0.04136, 0.04136),
-			Colour(0.727811, 0.626959, 0.626959) , 76.8, 0.01, 0.45, 0.565);
+			Colour(0.727811, 0.626959, 0.626959) , 76.8, 0.01, 0.0, 0.565);
 
 	Material pearl( Colour(0.25, 0.20725, 0.20725), Colour(1, 0.829, 0.829), 
 			Colour(0.296648, 0.296648, 0.296648), 11.264, 0.1,0.0,1.0 );
@@ -639,12 +639,12 @@ int main(int argc, char* argv[])
 
 	#ifdef USE_EXTENDEDLIGHTS
 	// Defines a ball light source
-	raytracer.addLightSource( new BallLight(Point3D(0, 0, 7),
-			2.0, Colour(0.9, 0.9, 0.9), 3) );
+	raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
+			2.0, Colour(0.9, 0.9, 0.9), 4) );
 	#else
 	// Defines a point light source.
 	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
-				Colour(0.5, 0.5, 0.5) ) );
+				Colour(0.9, 0.9,0.9) ) );
 	#endif
 
 
@@ -655,8 +655,8 @@ int main(int argc, char* argv[])
 		//			Colour(0.9, 0.9, 0.9) ) );
 
 		// Add a unit square into the scene with material mat.
-		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &turquoise);
-		SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &brass );
+		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold);
+		SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
 	
 		// Apply some transformations to the unit square.
 		double factor1[3] = { 1.0, 2.0, 1.0 };
@@ -692,21 +692,21 @@ int main(int argc, char* argv[])
 
 		// Add a unit square into the scene with material mat.
 		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass);
-		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &gold);
+		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &brass);
 		SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade);
-		SceneDagNode* cylinder = raytracer.addObject( new UnitCone(), &gold);
+		SceneDagNode* cylinder = raytracer.addObject( new UnitCylinder(), &brass);
 
 	
 		// Apply some transformations to the unit square.
 		double factor1[3] = { 1.0, 2.0, 1.0 };
 		double factor2[3] = { 6.0, 6.0, 1.0 };
-		double factor3[3] = { 2.0, 2.0, 3.0 };
+		double factor3[3] = { 0.5, 0.5, 2.0 };
 		raytracer.translate(sphere, Vector3D(0, 0, -5));	
 		raytracer.rotate(sphere, 'x', -45); 
 		raytracer.rotate(sphere, 'z', 45); 
 		raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
 
-		raytracer.translate(sphere1, Vector3D(-2, 0, -5));	
+		raytracer.translate(sphere1, Vector3D(-2.5, 0, -5));	
 	
 		raytracer.translate(plane, Vector3D(0, 0, -7));	
 		raytracer.rotate(plane, 'z', 45); 
@@ -715,7 +715,8 @@ int main(int argc, char* argv[])
 	
 		raytracer.translate(cylinder, Vector3D(3, 0, -5));
 		//raytracer.rotate(cylinder, 'y', -20); 
-		raytracer.rotate(cylinder, 'x', -90); 
+		raytracer.rotate(cylinder, 'z', 45); 
+		raytracer.rotate(cylinder, 'x', -75); 
 		raytracer.scale(cylinder, Point3D(0, 0, 0), factor3);
 
 	}// end of scene1
@@ -727,9 +728,9 @@ int main(int argc, char* argv[])
 	if(sceneNum == 2){
 		/*
 		raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
-			5.0, Colour(0.9, 0.9, 0.9), 0.888) );
-		raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
-		*/
+			5.0, Colour(0.9, 0.9, 0.9), 0.888) );*/
+		//raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
+		
 		//Set up walls
 		//========================================================
 
@@ -770,98 +771,39 @@ int main(int argc, char* argv[])
 		raytracer.scale(planeRear, Point3D(0, 0, 0), scaleFactor1);
 		//===========================================================
 	
+		double scaleEgg[3] = { 1.0, 1.5, 1.0 };		
 		double scaleBall[3] = {2,2,2};
 		SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &glass1);
 		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &ruby);
 		SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &chrome);
-		SceneDagNode* cone = raytracer.addObject(sphere, new UnitCone(), &emerald);
+		
+		//SceneDagNode* cone = raytracer.addObject(sphere, new UnitCone(), &emerald);
 
-		raytracer.translate(cone, Vector3D(0,0,-2));
+		//raytracer.translate(cone, Vector3D(0,0,-2));
 		raytracer.translate(sphere, Vector3D(-1,-1,-11));
 		raytracer.scale(sphere, Point3D(0,0,0), scaleBall);
 	
-		raytracer.translate(sphere1, Vector3D(2,-1,-11));
+		raytracer.translate(sphere1, Vector3D(2.5,-1,-11));
 		raytracer.translate(sphere2, Vector3D(2,3,-11));
-		raytracer.translate(cone, Vector3D(-1,-1,-12));
-		raytracer.rotate(cone, 'x', 90);
+		//raytracer.translate(cone, Vector3D(-1,-1,-12));
+		raytracer.rotate(sphere1, 'z', -45);
+		raytracer.scale(sphere1, Point3D(0,0,0), scaleEgg);
+		//raytracer.rotate(cone, 'x', 90);
 
 	}//end of scene 2
 	
 
 	//==================== Scene 3 =================
 	//===============================================
+	
+	
 	if(sceneNum == 3){
-		/*
-		raytracer.addLightSource( new BallLight(Point3D(-1, 1, 1),
-			5.0, Colour(0.9, 0.9, 0.9), 0.888) );
-		raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
-		//raytracer.addLightSource( new PointLight(Point3D(0, 0, 2),Colour(0.5, 0.5, 0.5)) );
-		*/
-
-		double factor1[3] = { 1.0, 1.0, 3.0 };
-		double factor2[3] = { 6.0, 6.0, 1.0 };
-		double factor3[3] = { 2.0, 2.0, 3.0 };
-
-		SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &chrome);
-		SceneDagNode* plane2 = raytracer.addObject( new UnitSquare(), &brass);
-		SceneDagNode* plane3 = raytracer.addObject( new UnitSquare(), &brass);
-		SceneDagNode* cone  = raytracer.addObject( new UnitCone(), &ruby);
-		SceneDagNode* cylinder = raytracer.addObject( new UnitCylinder(), &turquoise );
-
-
-		
-		raytracer.translate(cylinder, Vector3D(0,-3,-7));
-		raytracer.rotate(cylinder, 'x', -90);
-		raytracer.scale(cylinder, Point3D(0,0,0), factor1);
-		
-		raytracer.translate(cone, Vector3D(0,3,-7));
-		raytracer.rotate(cone, 'x', 90);
-		raytracer.scale(cone, Point3D(0,0,0), factor1);
-		
-
-		raytracer.translate(plane1, Vector3D(0,0,-10));
-		raytracer.translate(plane2, Vector3D(4,0,-7));
-		raytracer.translate(plane3, Vector3D(-4,0,-7));
-
-		raytracer.rotate(plane2, 'y', -75);
-		raytracer.rotate(plane3, 'y', 75);
-
-		raytracer.scale(plane1, Point3D(0,0,0), factor2);
-		raytracer.scale(plane2, Point3D(0,0,0), factor2);
-		raytracer.scale(plane3, Point3D(0,0,0), factor2);
-		
-		//==== face ====
-		SceneDagNode* eyeLfront = raytracer.addObject( new UnitSquare(), &pearl);
-		SceneDagNode* eyeRfront = raytracer.addObject( new UnitSquare(), &emerald);
-		
-		SceneDagNode* eyeLback = raytracer.addObject( new UnitSquare(), &emerald);
-		SceneDagNode* eyeRback = raytracer.addObject( new UnitSquare(), &emerald);
-		
-		double eyeScale[3] = {0.4, 0.4, 1};
-
-
-		raytracer.translate(eyeLfront, Vector3D(0.5,-0.5,-5));
-		raytracer.translate(eyeRfront, Vector3D(-0.5,-0.5,-5));
-		raytracer.translate(eyeLback, Vector3D(-0.5,-0.5,-9));
-		raytracer.translate(eyeRback, Vector3D(0.5,-0.5,-9));
-
-		raytracer.rotate(eyeLfront, 'z', 45);
-		raytracer.rotate(eyeRfront, 'z', 45);
-		raytracer.rotate(eyeLback, 'z', 45);
-		raytracer.rotate(eyeRback, 'z', 45);
-		
-		raytracer.scale(eyeLfront, Point3D(0,0,0), eyeScale);
-		raytracer.scale(eyeRfront, Point3D(0,0,0), eyeScale);
-		raytracer.scale(eyeLback, Point3D(0,0,0), eyeScale);
-		raytracer.scale(eyeRback, Point3D(0,0,0), eyeScale);
-	
-	}//end of scene 3
-	
-	if(sceneNum == 4){
 
 		#ifdef USE_EXTENDEDLIGHTS
-			raytracer.addLightSource( new BallLight(Point3D(5, 5, 0),
-				2.0, Colour(0.4, 0.4, 0.4), 3) );
+			raytracer.addLightSource( new BallLight(Point3D(-5, 5, -3),
+				2.0, Colour(0.4, 0.4, 0.4), 2) );
+			raytracer.addLightSource( new BallLight(Point3D(5, 5, -3),
+				2.0, Colour(0.4, 0.4, 0.4), 2) );
 		#else
 			raytracer.addLightSource( new PointLight(Point3D(-5, 5, 0), 
 				Colour(0.5, 0.0, 0.0) ) );
@@ -873,26 +815,31 @@ int main(int argc, char* argv[])
 
 		double planeScale[3] = {10.0, 10.0, 1.0};		
 		double sphereScale[3]= {1.5,1.5,1.5};
+		double coneScale[3] = {1.5,1.5,5};
 		
 		SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &pearl);
 		SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &chrome);
 		SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &brass);
+		//SceneDagNode* cone = raytracer.addObject( new UnitCone(), &turquoise);
 
 		raytracer.translate(sphere1, Vector3D(1, 1.5, -6.5));	
 		raytracer.translate(sphere2, Vector3D(-1, -1.5, -6.5));
 		raytracer.scale(sphere2, Point3D(0,0,0), sphereScale);	
 		raytracer.scale(sphere1, Point3D(0,0,0), sphereScale);
-
 		
 		raytracer.rotate(plane, 'z', 45); 
 		raytracer.scale(plane, Point3D(0,0,0), planeScale);
 		raytracer.translate(plane, Vector3D(0, 0, -8));	
+/*
+		raytracer.translate(cone, Vector3D(2.0,-1.0,-3));
+		raytracer.rotate(cone, 'x', 180);
+		raytracer.scale(cone, Point3D(0,0,0), coneScale); */
 	}
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
 
-	//raytracer.render(width, height, eye, view, up, fov, aa,  "sig1.bmp", 's');
+	raytracer.render(width, height, eye, view, up, fov, aa,  "sig1.bmp", 's');
 	//raytracer.render(width, height, eye, view, up, fov, aa, "diffuse1.bmp",'d');
 	//raytracer.render(width, height, eye, view, up, fov, aa, "view1.bmp",'p');
 	
@@ -906,7 +853,7 @@ int main(int argc, char* argv[])
 	
 	raytracer.render(width, height, eye2, view2, up, fov, aa, "sig2.bmp", 's');
 	//raytracer.render(width, height, eye2, view2, up, fov, aa, "diffuse2.bmp",'d');
-	raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp",'p');
+	//raytracer.render(width, height, eye2, view2, up, fov, aa, "view2.bmp",'p');
 	
 	
 	

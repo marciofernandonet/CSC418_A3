@@ -32,7 +32,7 @@
 #define USE_REFRACTIONS
 //#define USE_TRANSMISSIONSHADOWS
 #define USE_REFLECTIONS
-//~ #define USE_FINERFLUX
+//#define USE_FINERFLUX
 //#define IGNORE_SHADOWS
 
 class Point3D {
