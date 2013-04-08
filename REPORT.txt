@@ -1,6 +1,6 @@
 
 
-CSC418 - Assignemt 3 - Report
+CSC418 - Assignment 3 - Report
 ==============================
 ==============================
 
@@ -16,7 +16,7 @@ signature, diffuse scene, and Phong-shaded scene.
 
 For the second part of the assignment we decided to extend the raytracer 
 with additional features. These include capacity to simulate multiple 
-reflections and refractions, interesctions with different geometic surfaces 
+reflections and refractions, intersections with different geometric surfaces 
 (cylinder, cone) and affinely transformed versions of these, spherically 
 shaped ball light sources (i.e., lights finite and adjustable size), shadows 
 for point and ball lights (the latter produce soft shadows). We also 
@@ -26,7 +26,7 @@ the effects do.
 
 We also drew a few test scenes to exhibit the capabilities of our raytracer. 
 These scenes are not overly complex but they do show-off the effects 
-descibed above. Since each of the effects on their own greatly increase 
+described above. Since each of the effects on their own greatly increase 
 render time, each feature is turned on individually for the test scenes. In 
 principle, all the features may be turned on and the scene would have all 
 the extensions of the ray tracer, but would take quite a while to render.
@@ -34,11 +34,11 @@ the extensions of the ray tracer, but would take quite a while to render.
 Part A - Basic Ray Tracing
 ==============================
 
-Implementing Ray Casting with Anit-Aliasing
+Implementing Ray Casting with Anti-Aliasing
 ------------------------------
 
 The initial ray casting is implemented within the 'Raytracer::render' 
-subroutine. The basic ray tracer called for spawing a single ray for each 
+subroutine. The basic ray tracer called for spawning a single ray for each 
 pixel. In principle we loop through all pixels and spawn the correct ray for 
 each, calling shadeRay recursively to eventually determine the final colour 
 for each pixel. We additionally implemented anti-aliasing with 
@@ -50,7 +50,7 @@ storing computed RGB values in a 'superbuffer'. Once RGB values in the
 superbuffer have been computed we average these values over entries 
 corresponing to each pixel to determine the final RGB values of each pixel.
 
-The ray spawing process is identical in principle to the non-supersampled 
+The ray spawning process is identical in principle to the non-supersampled 
 case, though we determine additional offsets to specify the location of the 
 intersection of the supersampling rays with the image plane. Once we have 
 determined desired image plane intersection coordinates, we construct a 
@@ -60,13 +60,13 @@ view coordinates point from camera origin to the intersection with the image
 plane. These are also transformed using the viewToWorld matrix. The matrix 
 multiplication operator * is overloaded to accept both objects of type 
 Point3D and Vector3D on the right-hand side and performs the appropriate 
-transformation and returns an obect of the same type.
+transformation and returns an object of the same type.
 
 Finally we call the Ray3D constructor, passing it values for the ray origin 
 and ray direction in world coordinates. From here Raytracer::shadeRay is 
 called which handles the colour-determination process. This involves 
 determining intersections, computing Phong lighting model, spawing 
-additional rays for relflections and refractions, all of which are described 
+additional rays for reflections and refractions, all of which are described 
 in further detail later in this report.
 
 
@@ -75,7 +75,7 @@ Intersections
 Object added to the scene must be of shapes described in the SceneObject file.
 
 
-Each of the basic geometic objects for which we wish to determine 
+Each of the basic geometric objects for which we wish to determine 
 intersections has an implicit equation of the form F(x,y,z)=0, where x,y,z, 
 are to be considered in object coordinates. To determine the intersection of 
 the ray with an affinely deformed geometric object we must transform to the 
@@ -87,7 +87,7 @@ transform the intersection point and normals back to world coordinates
 appropriately (more on this below).
 
 The surface normal at the point of intersection is transformed to world 
-coordinates not by the modelToWorld matrix, but by it's inverse transpose. 
+coordinates not by the modelToWorld matrix, but by its inverse transpose. 
 Thus we call transNorm(worldToModel, n) to transform the normal to world 
 coordinates, rather than modelToWorld which was used to transform the 
 coordinates of the intersection point.
@@ -107,7 +107,7 @@ Intersections with the unit sphere are slighly more involved. Into the
 implicit equation F(x,y,z)=(x^2+y^2^z^2)-1=0 we substitute a+t*d, where a is 
 the ray's origin in model coordinates, d is the ray's direction vector 
 (normalized), and t the scalar parameter denoting distance along the ray 
-from it's origin. The implicit equation reduces to a quadratic equation for 
+from its origin. The implicit equation reduces to a quadratic equation for 
 t; the existence of positive real roots for the aforementioned indicates an 
 intersection along the ray's path and the root is the distance along the 
 ray. We take the smaller positive root as the true intersection (of the two 
@@ -127,7 +127,7 @@ F_cone(x,y,z)=z^2-k*(x^2+y^2)=0, where k is a parameter determining the
 slope of the cone. In each case, the intersections with infinite walls are 
 determined first, and then the circular caps. Surface normals with the walls 
 are found by computing the gradient of the implicit equation at the point of 
-intersection and then normailzing. See (well-commented) code for details.
+intersection and then normalizing. See (well-commented) code for details.
 
 =========================================
 Computing Shading
@@ -159,7 +159,7 @@ uses the material's diffuse component and applies an attenuation factor it.
 The attenuation factor is the dot product between the surface normal and the 
 direction vector towards the light source (with a lower bound clamp at zero).
 
-The specular component is attentuated with the dot product of the direction vector 
+The specular component is attenuated with the dot product of the direction vector 
 towards the light source with the ideal specular reflection direction vector, 
 raised to the power of the specular exponent (a material property).
 
@@ -210,19 +210,19 @@ in real life.
 Reflections and Refractions
 ====================================
 
-We implemented capactity for multiple relfections and refractions within the 
+We implemented capacity for multiple reflections and refractions within the 
 shadeRay function. Upon intersection, we check to determine whether we want 
 a new ray to reflect or refract.
 
 New material properties added for implementation
 ------------------------------------------------
-Reflections and refractions should depend on the particlar material, so we 
+Reflections and refractions should depend on the particular material, so we 
 added new material properties of type double to denote the reflectivity and 
 transmittivity of a particular material. Reflectivity is different from the 
 shinyness (i.e., specular component computed by Phong model); reflectivity 
 refers to the extent to which we are able to see other objects reflecting 
 within the surface. Transmittivity (again double between 0 and 1) refers to 
-the extent to which light passes thrugh a given material. Since refractions 
+the extent to which light passes through a given material. Since refractions 
 also depend on the speed of light in a medium, we added a variable 'cLight' 
 to materials; it is a type-double, between 0 and 1, referring to the ratio 
 of the speed of light in the given material to that in a vacuum.
@@ -235,7 +235,7 @@ New ray variables added
 -------------------------------
 We added integer variables denoting the numbers of reflections and 
 refractions, necessary because we only want a finite number of each. We also 
-added a cLight variable, analagous to that in matrial, so that when 
+added a cLight variable, analogous to that in material, so that when 
 computing refractions we know the relative speed of light of the ray in the 
 medium which the ray is leaving, which is necessary to compute the 
 refraction angle. The default value is set to 1.0 for rays spawned on the 
@@ -259,7 +259,7 @@ called recursively.  Raytracer::shadeRay returns a type-Colour object
 
 Once we have the colour returned from the reflected ray we need to determine 
 how to combine this with the Phong illumination model at the current 
-intersection point to produce something that looks realistic. We intilalize 
+intersection point to produce something that looks realistic. We initialize 
 ray.col to the Phong-computed value. We decided on the linear combination
 
 ray.col = (1-ref)*ray.col + ref*secondaryColour,
@@ -267,7 +267,7 @@ ray.col = (1-ref)*ray.col + ref*secondaryColour,
 where 'ref' refers to reflectivity of the material at the intersection,
       'secondaryColour' is the colour returned by shadeRay(reflectedRay)
       'ray.col' is the colour of the current (incoming ray).
-We attentuated the initial colour so we would not hit the limit.
+We attenuated the initial colour so we would not hit the limit.
 
 Regarding cLight initializations for reflected rays, just initialize it to 
 the cLight value of the incoming ray. This seems to be the most natural 
@@ -284,10 +284,10 @@ ray is entering or leaving the medium. To determine which case, we compute
 the dot product of the incoming direction with the surface normal at the 
 intersection. Positive indicates that the refracted ray leaves the medium 
 and enters the surrounding vacuum, so set c2=1; negative means we are 
-enerting a medium, so c2=intersection.mat.cLight. 
+entering a medium, so c2=intersection.mat.cLight. 
 
 The direction vector for the refracted ray is determined using the formula 
-in the class lecure notes. A small modification is required (just a 
+in the class lecture notes. A small modification is required (just a 
 particular change of sign) for rays exiting into a vacuum since our normals 
 always point outward.
 
