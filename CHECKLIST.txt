@@ -2,8 +2,13 @@
 Assignment 3 Checklist/Grading sheet
 -------------------------------------
 
-Name: 
-Student ID:
+Name: Akshay Ganeshen
+Student No.: 997 594 367
+CDF ID: g1ganesh
+
+Name: Albert Reidak Pena
+Student No.: 995 329 531
+CDF ID: c2reidal
 
 -----------------------------------------------------------------------------------------
 A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded otherwise!)
@@ -13,20 +18,27 @@ A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded oth
    Academic Honesty policy stated in 
    http://www.cs.toronto.edu/~kyros/courses/418/policy.2010f.html
 
-   ___Yes   ___No
+   (X)Yes   ___No
 
 
 2. I collaborated on this assignment with another student 
    (see http://www.cs.toronto.edu/~kyros/courses/418/policy.2010f.html for
     policy on assignments done in collaboration)
 
-   ___Yes   ___No
+   (X)Yes   ___No
 
    If you checked yes, please supply the following
 
-       Student name: 
-       Portion(s) of assignment completed by that student (see checklist below)
-
+       Student name: Akshay
+       Portion(s) of assignment completed by that student:
+           Reflections, anti-aliasing, shadows, sphere intersection code,
+           extended light sources
+       
+       Student name: Albert
+       Portion(s) of assignment completed by that student:
+           Refractions, square intersection code, cylinder intersection code,
+           cone intersection code, sample renders
+       
 -----------------------------------------------------------------------------------------
 
 B. PLACE AN (X) IN FRONT OF PORTIONS OF THE ASSIGNMENT THAT YOU COMPLETED IN FULL.
@@ -39,16 +51,16 @@ B. PLACE AN (X) IN FRONT OF PORTIONS OF THE ASSIGNMENT THAT YOU COMPLETED IN FUL
    WE WILL BE ABLE TO MAKE AN ACCURATE ASSESSMENT
 
    
-___   (10 points) Part 1a     Ray casting
+(X)   (10 points) Part 1a     Ray casting
                   
-___   (20 points) Part 1b     Ray-sphere intersection
+(X)   (20 points) Part 1b     Ray-sphere intersection
 
-___   (15 points) Part 1c     Ray-square intersection
+(X)   (15 points) Part 1c     Ray-square intersection
 
-___   (15 points) Part 1d     Phong shading (ambient, diffuse, and specular components)
+(X)   (15 points) Part 1d     Phong shading (ambient, diffuse, and specular components)
                   
-___   ( 5 points) Part 1e     Coding style
+(X)   ( 5 points) Part 1e     Coding style
 
-___   (10 points) Part 1f     Written report
+(X)   (10 points) Part 1f     Written report
 
 -------------------------------------------------------------------------------- 
