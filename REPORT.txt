@@ -314,4 +314,4 @@ light sources
 Albert
 ------------------------------------
 Refractions, square intersection code, cylinder intersection code, cone 
-intersection code, sample renders
+intersection code, sample renders, diffuse and scene signature modes
