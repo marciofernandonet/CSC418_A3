@@ -31,7 +31,7 @@ render time, each feature is turned on individually for the test scenes. In
 principle, all the features may be turned on and the scene would have all 
 the extensions of the ray tracer, but would take quite a while to render.
 
-Part A - Basic Ray Tracing
+Raytracer Design
 ==============================
 
 Implementing Ray Casting with Anti-Aliasing
@@ -297,3 +297,21 @@ coefficient gives more weight to the colour returned by the refracted ray
 and less to the computed Phong-illumination at the intersection point on the 
 surface.
 
+
+====================================
+Role of each member
+====================================
+
+We are both extremely happy with the outcome of the raytracer. We feel that
+we each contributed equally and had no issues performing our respective
+parts. Our part breakdowns are as follows:
+
+Akshay
+------------------------------------
+Reflections, anti-aliasing, shadows, sphere intersection code, extended 
+light sources
+       
+Albert
+------------------------------------
+Refractions, square intersection code, cylinder intersection code, cone 
+intersection code, sample renders
