@@ -33,7 +33,7 @@
 //#define USE_TRANSMISSIONSHADOWS
 #define USE_REFLECTIONS
 //~ #define USE_FINERFLUX
-#define IGNORE_SHADOWS
+//#define IGNORE_SHADOWS
 
 class Point3D {
 public:
