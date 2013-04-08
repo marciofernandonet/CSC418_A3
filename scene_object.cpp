@@ -376,7 +376,7 @@ bool UnitCone::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 					ray.intersection.normal = transNorm(worldToModel, nInt);
 					return true;
 				}//Ray missed side of cylinder between z=-1, z=+1
-			} //Something blocking ray and cylinder wall,
+			} //Something blocking ray and cone wall,
 			  //but whatever it is might not block the rays 
 			  //intersections with caps, which is checked below
 		}
